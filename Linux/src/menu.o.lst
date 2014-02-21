@@ -1,0 +1,1089 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 6
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"menu.cpp"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text._Z8testFuncv,"ax",%progbits
+  19              		.align	2
+  20              		.global	_Z8testFuncv
+  21              		.thumb
+  22              		.thumb_func
+  24              	_Z8testFuncv:
+  25              	.LFB29:
+  26              		.file 1 "../src/menu.cpp"
+   1:../src/menu.cpp **** /*
+   2:../src/menu.cpp ****  * menu.cpp
+   3:../src/menu.cpp ****  *
+   4:../src/menu.cpp ****  *  Created on: 27-03-2013
+   5:../src/menu.cpp ****  *      Author: jachu
+   6:../src/menu.cpp ****  */
+   7:../src/menu.cpp **** 
+   8:../src/menu.cpp **** #include "menu.h"
+   9:../src/menu.cpp **** #include "lcd.h"
+  10:../src/menu.cpp **** #include <string.h>
+  11:../src/menu.cpp **** 
+  12:../src/menu.cpp **** #define LCD_ROWS 6
+  13:../src/menu.cpp **** #define LCD_COLS 14
+  14:../src/menu.cpp **** #define LCD_CHAR_HEIGHT 8
+  15:../src/menu.cpp **** #define ENTRY_BUF 28
+  16:../src/menu.cpp **** #define TAB 2
+  17:../src/menu.cpp **** 
+  18:../src/menu.cpp **** static const char mainLevel1[]  = "Testy";
+  19:../src/menu.cpp **** static const char mainLevel2[]  = "Tryby";
+  20:../src/menu.cpp **** 
+  21:../src/menu.cpp **** static const char testsMenu1[]  = "Sharp";
+  22:../src/menu.cpp **** static const char testsMenu2[]  = "Czujnik linii";
+  23:../src/menu.cpp **** static const char testsMenu3[]  = "Silnik";
+  24:../src/menu.cpp **** 
+  25:../src/menu.cpp **** 
+  26:../src/menu.cpp **** 
+  27:../src/menu.cpp **** 
+  28:../src/menu.cpp **** void testFunc(void){
+  27              		.loc 1 28 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 1, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+  32 0000 80B4     		push	{r7}
+  33              	.LCFI0:
+  34              		.cfi_def_cfa_offset 4
+  35              		.cfi_offset 7, -4
+  36 0002 00AF     		add	r7, sp, #0
+  37              	.LCFI1:
+  38              		.cfi_def_cfa_register 7
+  29:../src/menu.cpp **** 
+  30:../src/menu.cpp **** }
+  39              		.loc 1 30 0
+  40 0004 BD46     		mov	sp, r7
+  41 0006 80BC     		pop	{r7}
+  42 0008 7047     		bx	lr
+  43              		.cfi_endproc
+  44              	.LFE29:
+  46              		.global	testsLevel
+  47 000a 00BF     		.section	.data.testsLevel,"aw",%progbits
+  48              		.align	2
+  51              	testsLevel:
+  52 0000 00000000 		.word	_ZL10testsMenu1
+  53 0004 05       		.byte	5
+  54 0005 000000   		.space	3
+  55 0008 00000000 		.word	0
+  56 000c 00       		.byte	0
+  57 000d 000000   		.space	3
+  58 0010 00000000 		.word	_Z8testFuncv
+  59 0014 00000000 		.word	_ZL10testsMenu1
+  60 0018 0D       		.byte	13
+  61 0019 000000   		.space	3
+  62 001c 00000000 		.word	0
+  63 0020 00       		.byte	0
+  64 0021 000000   		.space	3
+  65 0024 00000000 		.word	_Z8testFuncv
+  66 0028 00000000 		.word	_ZL10testsMenu1
+  67 002c 06       		.byte	6
+  68 002d 000000   		.space	3
+  69 0030 00000000 		.word	0
+  70 0034 00       		.byte	0
+  71 0035 000000   		.space	3
+  72 0038 00000000 		.word	_Z8testFuncv
+  73              		.global	mainLevel
+  74              		.section	.data.mainLevel,"aw",%progbits
+  75              		.align	2
+  78              	mainLevel:
+  79 0000 00000000 		.word	_ZL10mainLevel1
+  80 0004 05       		.byte	5
+  81 0005 000000   		.space	3
+  82 0008 00000000 		.word	testsLevel
+  83 000c 03       		.byte	3
+  84 000d 000000   		.space	3
+  85 0010 00000000 		.word	0
+  86 0014 00000000 		.word	_ZL10mainLevel2
+  87 0018 05       		.byte	5
+  88 0019 000000   		.space	3
+  89 001c 00000000 		.word	0
+  90 0020 00       		.byte	0
+  91 0021 000000   		.space	3
+  92 0024 00000000 		.word	_Z8testFuncv
+  93              		.global	mainLevelSize
+  94              		.section	.data.mainLevelSize,"aw",%progbits
+  97              	mainLevelSize:
+  98 0000 03       		.byte	3
+  99              		.section	.text._Z12numEntryRowsh,"ax",%progbits
+ 100              		.align	2
+ 101              		.global	_Z12numEntryRowsh
+ 102              		.thumb
+ 103              		.thumb_func
+ 105              	_Z12numEntryRowsh:
+ 106              	.LFB30:
+  31:../src/menu.cpp **** 
+  32:../src/menu.cpp **** MenuEntry testsLevel[] = {
+  33:../src/menu.cpp **** 		{testsMenu1, sizeof(testsMenu1) - 1, 0, 0, testFunc},
+  34:../src/menu.cpp **** 		{testsMenu1, sizeof(testsMenu2) - 1, 0, 0, testFunc},
+  35:../src/menu.cpp **** 		{testsMenu1, sizeof(testsMenu3) - 1, 0, 0, testFunc},
+  36:../src/menu.cpp **** };
+  37:../src/menu.cpp **** 
+  38:../src/menu.cpp **** MenuEntry mainLevel[] = {
+  39:../src/menu.cpp **** 	{mainLevel1, sizeof(mainLevel1) - 1, testsLevel, 3, 0},
+  40:../src/menu.cpp **** 	{mainLevel2, sizeof(mainLevel2) - 1, 0, 0, testFunc}
+  41:../src/menu.cpp **** };
+  42:../src/menu.cpp **** 
+  43:../src/menu.cpp **** 
+  44:../src/menu.cpp **** 
+  45:../src/menu.cpp **** uint8_t mainLevelSize = 3;
+  46:../src/menu.cpp **** 
+  47:../src/menu.cpp **** uint8_t numEntryRows(uint8_t len){
+ 107              		.loc 1 47 0
+ 108              		.cfi_startproc
+ 109              		@ args = 0, pretend = 0, frame = 8
+ 110              		@ frame_needed = 1, uses_anonymous_args = 0
+ 111              		@ link register save eliminated.
+ 112 0000 80B4     		push	{r7}
+ 113              	.LCFI2:
+ 114              		.cfi_def_cfa_offset 4
+ 115              		.cfi_offset 7, -4
+ 116 0002 83B0     		sub	sp, sp, #12
+ 117              	.LCFI3:
+ 118              		.cfi_def_cfa_offset 16
+ 119 0004 00AF     		add	r7, sp, #0
+ 120              	.LCFI4:
+ 121              		.cfi_def_cfa_register 7
+ 122 0006 0346     		mov	r3, r0
+ 123 0008 FB71     		strb	r3, [r7, #7]
+  48:../src/menu.cpp **** 	return (uint8_t)(((int8_t)len - 2 - 1)/(LCD_COLS - 2) + 1);
+ 124              		.loc 1 48 0
+ 125 000a FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 126 000c 5BB2     		sxtb	r3, r3
+ 127 000e A3F10302 		sub	r2, r3, #3
+ 128 0012 4AF6AB23 		movw	r3, #43691
+ 129 0016 C2F6AA23 		movt	r3, 10922
+ 130 001a 83FB0213 		smull	r1, r3, r3, r2
+ 131 001e 4FEA6301 		asr	r1, r3, #1
+ 132 0022 4FEAE273 		asr	r3, r2, #31
+ 133 0026 CB1A     		subs	r3, r1, r3
+ 134 0028 DBB2     		uxtb	r3, r3
+ 135 002a 03F10103 		add	r3, r3, #1
+ 136 002e DBB2     		uxtb	r3, r3
+  49:../src/menu.cpp **** }
+ 137              		.loc 1 49 0
+ 138 0030 1846     		mov	r0, r3
+ 139 0032 07F10C07 		add	r7, r7, #12
+ 140 0036 BD46     		mov	sp, r7
+ 141 0038 80BC     		pop	{r7}
+ 142 003a 7047     		bx	lr
+ 143              		.cfi_endproc
+ 144              	.LFE30:
+ 146              		.section	.text._Z15markActiveEntryhh,"ax",%progbits
+ 147              		.align	2
+ 148              		.global	_Z15markActiveEntryhh
+ 149              		.thumb
+ 150              		.thumb_func
+ 152              	_Z15markActiveEntryhh:
+ 153              	.LFB31:
+  50:../src/menu.cpp **** 
+  51:../src/menu.cpp **** //activeLine - lowest line of the activeEntry
+  52:../src/menu.cpp **** void markActiveEntry(uint8_t activeLine, uint8_t entryLen){
+ 154              		.loc 1 52 0
+ 155              		.cfi_startproc
+ 156              		@ args = 0, pretend = 0, frame = 8
+ 157              		@ frame_needed = 1, uses_anonymous_args = 0
+ 158 0000 90B5     		push	{r4, r7, lr}
+ 159              	.LCFI5:
+ 160              		.cfi_def_cfa_offset 12
+ 161              		.cfi_offset 14, -4
+ 162              		.cfi_offset 7, -8
+ 163              		.cfi_offset 4, -12
+ 164 0002 85B0     		sub	sp, sp, #20
+ 165              	.LCFI6:
+ 166              		.cfi_def_cfa_offset 32
+ 167 0004 02AF     		add	r7, sp, #8
+ 168              	.LCFI7:
+ 169              		.cfi_def_cfa 7, 24
+ 170 0006 0246     		mov	r2, r0
+ 171 0008 0B46     		mov	r3, r1
+ 172 000a FA71     		strb	r2, [r7, #7]
+ 173 000c BB71     		strb	r3, [r7, #6]
+  53:../src/menu.cpp **** 	LcdSingleBar(0, (activeLine + 1)*LCD_CHAR_HEIGHT, numEntryRows(entryLen)*LCD_CHAR_HEIGHT, LCD_X_RE
+ 174              		.loc 1 53 0
+ 175 000e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 176 0010 03F10103 		add	r3, r3, #1
+ 177 0014 DBB2     		uxtb	r3, r3
+ 178 0016 4FEAC303 		lsl	r3, r3, #3
+ 179 001a DCB2     		uxtb	r4, r3
+ 180 001c BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 181 001e 1846     		mov	r0, r3
+ 182 0020 FFF7FEFF 		bl	_Z12numEntryRowsh
+ 183 0024 0346     		mov	r3, r0
+ 184 0026 4FEAC303 		lsl	r3, r3, #3
+ 185 002a DBB2     		uxtb	r3, r3
+ 186 002c 4FF00202 		mov	r2, #2
+ 187 0030 0092     		str	r2, [sp, #0]
+ 188 0032 4FF00000 		mov	r0, #0
+ 189 0036 2146     		mov	r1, r4
+ 190 0038 1A46     		mov	r2, r3
+ 191 003a 4FF08003 		mov	r3, #128
+ 192 003e FFF7FEFF 		bl	_Z12LcdSingleBarhhhh12LcdPixelMode
+  54:../src/menu.cpp **** }
+ 193              		.loc 1 54 0
+ 194 0042 07F10C07 		add	r7, r7, #12
+ 195 0046 BD46     		mov	sp, r7
+ 196 0048 90BD     		pop	{r4, r7, pc}
+ 197              		.cfi_endproc
+ 198              	.LFE31:
+ 200 004a 00BF     		.section	.text._Z10redrawMenuP9menuentryhhh,"ax",%progbits
+ 201              		.align	2
+ 202              		.global	_Z10redrawMenuP9menuentryhhh
+ 203              		.thumb
+ 204              		.thumb_func
+ 206              	_Z10redrawMenuP9menuentryhhh:
+ 207              	.LFB32:
+  55:../src/menu.cpp **** 
+  56:../src/menu.cpp **** uint8_t redrawMenu(MenuEntry* curLevel, uint8_t topEntry, uint8_t activeEntry, uint8_t size){
+ 208              		.loc 1 56 0
+ 209              		.cfi_startproc
+ 210              		@ args = 0, pretend = 0, frame = 40
+ 211              		@ frame_needed = 1, uses_anonymous_args = 0
+ 212 0000 80B5     		push	{r7, lr}
+ 213              	.LCFI8:
+ 214              		.cfi_def_cfa_offset 8
+ 215              		.cfi_offset 14, -4
+ 216              		.cfi_offset 7, -8
+ 217 0002 8AB0     		sub	sp, sp, #40
+ 218              	.LCFI9:
+ 219              		.cfi_def_cfa_offset 48
+ 220 0004 00AF     		add	r7, sp, #0
+ 221              	.LCFI10:
+ 222              		.cfi_def_cfa_register 7
+ 223 0006 7860     		str	r0, [r7, #4]
+ 224 0008 F970     		strb	r1, [r7, #3]
+ 225 000a BA70     		strb	r2, [r7, #2]
+ 226 000c 7B70     		strb	r3, [r7, #1]
+ 227              	.LBB2:
+  57:../src/menu.cpp **** 	uint8_t i = topEntry;
+ 228              		.loc 1 57 0
+ 229 000e FB78     		ldrb	r3, [r7, #3]
+ 230 0010 87F82730 		strb	r3, [r7, #39]
+  58:../src/menu.cpp **** 	uint8_t activeLine = 0;
+ 231              		.loc 1 58 0
+ 232 0014 4FF00003 		mov	r3, #0
+ 233 0018 87F82630 		strb	r3, [r7, #38]
+  59:../src/menu.cpp **** 	LcdClear();
+ 234              		.loc 1 59 0
+ 235 001c FFF7FEFF 		bl	_Z8LcdClearv
+  60:../src/menu.cpp **** 	LcdGotoXYFont(1,1);
+ 236              		.loc 1 60 0
+ 237 0020 4FF00100 		mov	r0, #1
+ 238 0024 4FF00101 		mov	r1, #1
+ 239 0028 FFF7FEFF 		bl	_Z13LcdGotoXYFonthh
+  61:../src/menu.cpp **** 	while(i < size && activeLine < LCD_ROWS){
+ 240              		.loc 1 61 0
+ 241 002c 84E0     		b	.L5
+ 242              	.L14:
+ 243              	.LBB3:
+  62:../src/menu.cpp **** 		uint8_t pos = 0;
+ 244              		.loc 1 62 0
+ 245 002e 4FF00003 		mov	r3, #0
+ 246 0032 87F82530 		strb	r3, [r7, #37]
+  63:../src/menu.cpp **** 		char lcdData[ENTRY_BUF];
+  64:../src/menu.cpp **** 		strcpy(lcdData, curLevel[i].text);
+ 247              		.loc 1 64 0
+ 248 0036 97F82720 		ldrb	r2, [r7, #39]	@ zero_extendqisi2
+ 249 003a 1346     		mov	r3, r2
+ 250 003c 4FEA8303 		lsl	r3, r3, #2
+ 251 0040 9B18     		adds	r3, r3, r2
+ 252 0042 4FEA8303 		lsl	r3, r3, #2
+ 253 0046 7A68     		ldr	r2, [r7, #4]
+ 254 0048 D318     		adds	r3, r2, r3
+ 255 004a 1B68     		ldr	r3, [r3, #0]
+ 256 004c 07F10802 		add	r2, r7, #8
+ 257 0050 1046     		mov	r0, r2
+ 258 0052 1946     		mov	r1, r3
+ 259 0054 FFF7FEFF 		bl	strcpy
+  65:../src/menu.cpp **** 		while(lcdData[pos] != 0){
+ 260              		.loc 1 65 0
+ 261 0058 35E0     		b	.L6
+ 262              	.L10:
+  66:../src/menu.cpp **** 			if(pos == LCD_COLS){
+ 263              		.loc 1 66 0
+ 264 005a 97F82530 		ldrb	r3, [r7, #37]	@ zero_extendqisi2
+ 265 005e 0E2B     		cmp	r3, #14
+ 266 0060 1FD1     		bne	.L7
+  67:../src/menu.cpp **** 				if(++activeLine == LCD_ROWS){
+ 267              		.loc 1 67 0
+ 268 0062 97F82630 		ldrb	r3, [r7, #38]
+ 269 0066 03F10103 		add	r3, r3, #1
+ 270 006a 87F82630 		strb	r3, [r7, #38]
+ 271 006e 97F82630 		ldrb	r3, [r7, #38]	@ zero_extendqisi2
+ 272 0072 062B     		cmp	r3, #6
+ 273 0074 14BF     		ite	ne
+ 274 0076 0023     		movne	r3, #0
+ 275 0078 0123     		moveq	r3, #1
+ 276 007a DBB2     		uxtb	r3, r3
+ 277 007c 002B     		cmp	r3, #0
+ 278 007e 06D0     		beq	.L8
+  68:../src/menu.cpp **** 					i--;
+ 279              		.loc 1 68 0
+ 280 0080 97F82730 		ldrb	r3, [r7, #39]
+ 281 0084 03F1FF33 		add	r3, r3, #-1
+ 282 0088 87F82730 		strb	r3, [r7, #39]
+  69:../src/menu.cpp **** 					break;
+ 283              		.loc 1 69 0
+ 284 008c 29E0     		b	.L9
+ 285              	.L8:
+  70:../src/menu.cpp **** 				}
+  71:../src/menu.cpp **** 				LcdGotoXYFont(1 + TAB, activeLine + 1);
+ 286              		.loc 1 71 0
+ 287 008e 97F82630 		ldrb	r3, [r7, #38]
+ 288 0092 03F10103 		add	r3, r3, #1
+ 289 0096 DBB2     		uxtb	r3, r3
+ 290 0098 4FF00300 		mov	r0, #3
+ 291 009c 1946     		mov	r1, r3
+ 292 009e FFF7FEFF 		bl	_Z13LcdGotoXYFonthh
+ 293              	.L7:
+  72:../src/menu.cpp **** 			}
+  73:../src/menu.cpp **** 			LcdChr(FONT_1X, lcdData[pos]);
+ 294              		.loc 1 73 0
+ 295 00a2 97F82530 		ldrb	r3, [r7, #37]	@ zero_extendqisi2
+ 296 00a6 07F12802 		add	r2, r7, #40
+ 297 00aa D318     		adds	r3, r2, r3
+ 298 00ac 13F8203C 		ldrb	r3, [r3, #-32]	@ zero_extendqisi2
+ 299 00b0 4FF00100 		mov	r0, #1
+ 300 00b4 1946     		mov	r1, r3
+ 301 00b6 FFF7FEFF 		bl	_Z6LcdChr11LcdFontSizeh
+  74:../src/menu.cpp **** 			pos++;
+ 302              		.loc 1 74 0
+ 303 00ba 97F82530 		ldrb	r3, [r7, #37]
+ 304 00be 03F10103 		add	r3, r3, #1
+ 305 00c2 87F82530 		strb	r3, [r7, #37]
+ 306              	.L6:
+  65:../src/menu.cpp **** 		while(lcdData[pos] != 0){
+ 307              		.loc 1 65 0 discriminator 1
+ 308 00c6 97F82530 		ldrb	r3, [r7, #37]	@ zero_extendqisi2
+ 309 00ca 07F12802 		add	r2, r7, #40
+ 310 00ce D318     		adds	r3, r2, r3
+ 311 00d0 13F8203C 		ldrb	r3, [r3, #-32]	@ zero_extendqisi2
+ 312 00d4 002B     		cmp	r3, #0
+ 313 00d6 0CBF     		ite	eq
+ 314 00d8 0023     		moveq	r3, #0
+ 315 00da 0123     		movne	r3, #1
+ 316 00dc DBB2     		uxtb	r3, r3
+ 317 00de 002B     		cmp	r3, #0
+ 318 00e0 BBD1     		bne	.L10
+ 319              	.L9:
+  75:../src/menu.cpp **** 		}
+  76:../src/menu.cpp **** 		if(i == activeEntry){
+ 320              		.loc 1 76 0
+ 321 00e2 97F82720 		ldrb	r2, [r7, #39]	@ zero_extendqisi2
+ 322 00e6 BB78     		ldrb	r3, [r7, #2]	@ zero_extendqisi2
+ 323 00e8 9A42     		cmp	r2, r3
+ 324 00ea 0FD1     		bne	.L11
+  77:../src/menu.cpp **** 			markActiveEntry(activeLine, curLevel[activeEntry].len);
+ 325              		.loc 1 77 0
+ 326 00ec BA78     		ldrb	r2, [r7, #2]	@ zero_extendqisi2
+ 327 00ee 1346     		mov	r3, r2
+ 328 00f0 4FEA8303 		lsl	r3, r3, #2
+ 329 00f4 9B18     		adds	r3, r3, r2
+ 330 00f6 4FEA8303 		lsl	r3, r3, #2
+ 331 00fa 7A68     		ldr	r2, [r7, #4]
+ 332 00fc D318     		adds	r3, r2, r3
+ 333 00fe 1B79     		ldrb	r3, [r3, #4]	@ zero_extendqisi2
+ 334 0100 97F82620 		ldrb	r2, [r7, #38]	@ zero_extendqisi2
+ 335 0104 1046     		mov	r0, r2
+ 336 0106 1946     		mov	r1, r3
+ 337 0108 FFF7FEFF 		bl	_Z15markActiveEntryhh
+ 338              	.L11:
+  78:../src/menu.cpp **** 		}
+  79:../src/menu.cpp **** 		i++;
+ 339              		.loc 1 79 0
+ 340 010c 97F82730 		ldrb	r3, [r7, #39]
+ 341 0110 03F10103 		add	r3, r3, #1
+ 342 0114 87F82730 		strb	r3, [r7, #39]
+  80:../src/menu.cpp **** 		LcdGotoXYFont(1, ++activeLine + 1);
+ 343              		.loc 1 80 0
+ 344 0118 97F82630 		ldrb	r3, [r7, #38]
+ 345 011c 03F10103 		add	r3, r3, #1
+ 346 0120 87F82630 		strb	r3, [r7, #38]
+ 347 0124 97F82630 		ldrb	r3, [r7, #38]
+ 348 0128 03F10103 		add	r3, r3, #1
+ 349 012c DBB2     		uxtb	r3, r3
+ 350 012e 4FF00100 		mov	r0, #1
+ 351 0132 1946     		mov	r1, r3
+ 352 0134 FFF7FEFF 		bl	_Z13LcdGotoXYFonthh
+ 353              	.L5:
+ 354              	.LBE3:
+  61:../src/menu.cpp **** 	while(i < size && activeLine < LCD_ROWS){
+ 355              		.loc 1 61 0 discriminator 1
+ 356 0138 97F82720 		ldrb	r2, [r7, #39]	@ zero_extendqisi2
+ 357 013c 7B78     		ldrb	r3, [r7, #1]	@ zero_extendqisi2
+ 358 013e 9A42     		cmp	r2, r3
+ 359 0140 06D2     		bcs	.L12
+  61:../src/menu.cpp **** 	while(i < size && activeLine < LCD_ROWS){
+ 360              		.loc 1 61 0 is_stmt 0 discriminator 2
+ 361 0142 97F82630 		ldrb	r3, [r7, #38]	@ zero_extendqisi2
+ 362 0146 052B     		cmp	r3, #5
+ 363 0148 02D8     		bhi	.L12
+  61:../src/menu.cpp **** 	while(i < size && activeLine < LCD_ROWS){
+ 364              		.loc 1 61 0 discriminator 4
+ 365 014a 4FF00103 		mov	r3, #1
+ 366 014e 01E0     		b	.L13
+ 367              	.L12:
+  61:../src/menu.cpp **** 	while(i < size && activeLine < LCD_ROWS){
+ 368              		.loc 1 61 0 discriminator 3
+ 369 0150 4FF00003 		mov	r3, #0
+ 370              	.L13:
+  61:../src/menu.cpp **** 	while(i < size && activeLine < LCD_ROWS){
+ 371              		.loc 1 61 0 discriminator 5
+ 372 0154 002B     		cmp	r3, #0
+ 373 0156 7FF46AAF 		bne	.L14
+  81:../src/menu.cpp **** 	}
+  82:../src/menu.cpp **** 	activeLine = 0;
+ 374              		.loc 1 82 0 is_stmt 1
+ 375 015a 4FF00003 		mov	r3, #0
+ 376 015e 87F82630 		strb	r3, [r7, #38]
+  83:../src/menu.cpp **** 	LcdUpdate();
+ 377              		.loc 1 83 0
+ 378 0162 FFF7FEFF 		bl	_Z9LcdUpdatev
+  84:../src/menu.cpp **** 	return i - 1;
+ 379              		.loc 1 84 0
+ 380 0166 97F82730 		ldrb	r3, [r7, #39]
+ 381 016a 03F1FF33 		add	r3, r3, #-1
+ 382 016e DBB2     		uxtb	r3, r3
+ 383              	.LBE2:
+  85:../src/menu.cpp **** }
+ 384              		.loc 1 85 0
+ 385 0170 1846     		mov	r0, r3
+ 386 0172 07F12807 		add	r7, r7, #40
+ 387 0176 BD46     		mov	sp, r7
+ 388 0178 80BD     		pop	{r7, pc}
+ 389              		.cfi_endproc
+ 390              	.LFE32:
+ 392 017a 00BF     		.section	.text._Z11displayMenuP9menuentryh,"ax",%progbits
+ 393              		.align	2
+ 394              		.global	_Z11displayMenuP9menuentryh
+ 395              		.thumb
+ 396              		.thumb_func
+ 398              	_Z11displayMenuP9menuentryh:
+ 399              	.LFB33:
+  86:../src/menu.cpp **** 
+  87:../src/menu.cpp **** void displayMenu(MenuEntry* curLevel, uint8_t size){
+ 400              		.loc 1 87 0
+ 401              		.cfi_startproc
+ 402              		@ args = 0, pretend = 0, frame = 8
+ 403              		@ frame_needed = 1, uses_anonymous_args = 0
+ 404              		@ link register save eliminated.
+ 405 0000 80B4     		push	{r7}
+ 406              	.LCFI11:
+ 407              		.cfi_def_cfa_offset 4
+ 408              		.cfi_offset 7, -4
+ 409 0002 83B0     		sub	sp, sp, #12
+ 410              	.LCFI12:
+ 411              		.cfi_def_cfa_offset 16
+ 412 0004 00AF     		add	r7, sp, #0
+ 413              	.LCFI13:
+ 414              		.cfi_def_cfa_register 7
+ 415 0006 7860     		str	r0, [r7, #4]
+ 416 0008 0B46     		mov	r3, r1
+ 417 000a FB70     		strb	r3, [r7, #3]
+  88:../src/menu.cpp **** 	/*uint8_t activeEntry = 0;
+  89:../src/menu.cpp **** 	uint8_t topEntry = 0;
+  90:../src/menu.cpp **** 	uint8_t bottomEntry = redrawMenu(curLevel, topEntry, activeEntry, size);
+  91:../src/menu.cpp **** 	while(1){
+  92:../src/menu.cpp **** 		if(isPushed[DOWN_BUT] == 1){
+  93:../src/menu.cpp **** 			if(activeEntry + 1 == size){
+  94:../src/menu.cpp **** 				activeEntry = 0;
+  95:../src/menu.cpp **** 				topEntry = 0;
+  96:../src/menu.cpp **** 			}
+  97:../src/menu.cpp **** 			else{
+  98:../src/menu.cpp **** 				activeEntry++;
+  99:../src/menu.cpp **** 				if(activeEntry > bottomEntry){
+ 100:../src/menu.cpp **** 					int8_t lines = numEntryRows(pgm_read_byte(&(curLevel[activeEntry].len)));
+ 101:../src/menu.cpp **** 					while(lines > 0){
+ 102:../src/menu.cpp **** 						lines -= numEntryRows(pgm_read_byte(&(curLevel[topEntry++].len)));
+ 103:../src/menu.cpp **** 					}
+ 104:../src/menu.cpp **** 				}
+ 105:../src/menu.cpp **** 			}
+ 106:../src/menu.cpp **** 			bottomEntry = redrawMenu(curLevel, topEntry, activeEntry, size);
+ 107:../src/menu.cpp **** 			isPushed[DOWN_BUT] = 0;
+ 108:../src/menu.cpp **** 		}
+ 109:../src/menu.cpp **** 		if(isPushed[UP_BUT] == 1){
+ 110:../src/menu.cpp **** 			if(activeEntry - 1 < 0){
+ 111:../src/menu.cpp **** 				activeEntry = topEntry = size - 1;
+ 112:../src/menu.cpp **** 				uint8_t lines = 0;
+ 113:../src/menu.cpp **** 				while(lines < LCD_ROWS){
+ 114:../src/menu.cpp **** 					lines += numEntryRows(pgm_read_byte(&(curLevel[topEntry--].len)));
+ 115:../src/menu.cpp **** 				}
+ 116:../src/menu.cpp **** 				topEntry++;
+ 117:../src/menu.cpp **** 				if(lines > LCD_ROWS){
+ 118:../src/menu.cpp **** 					topEntry++;
+ 119:../src/menu.cpp **** 				}
+ 120:../src/menu.cpp **** 			}
+ 121:../src/menu.cpp **** 			else{
+ 122:../src/menu.cpp **** 				activeEntry--;
+ 123:../src/menu.cpp **** 				if(activeEntry < topEntry){
+ 124:../src/menu.cpp **** 					topEntry--;
+ 125:../src/menu.cpp **** 				}
+ 126:../src/menu.cpp **** 			}
+ 127:../src/menu.cpp **** 			bottomEntry = redrawMenu(curLevel, topEntry, activeEntry, size);
+ 128:../src/menu.cpp **** 			isPushed[UP_BUT] = 0;
+ 129:../src/menu.cpp **** 		}
+ 130:../src/menu.cpp **** 		if(isPushed[RIGHT_BUT] == 1){
+ 131:../src/menu.cpp **** 			if(pgm_read_word(&(curLevel[activeEntry].function)) != NULL){
+ 132:../src/menu.cpp **** 				((voidFunc)pgm_read_word(&(curLevel[activeEntry].function)))();
+ 133:../src/menu.cpp **** 			}
+ 134:../src/menu.cpp **** 			if(pgm_read_word(&(curLevel[activeEntry].nextLevel)) != NULL){
+ 135:../src/menu.cpp **** 				displayMenu((MenuEntry*)pgm_read_word(&(curLevel[activeEntry].nextLevel)), 1);	//! POPRAWIC!!!!
+ 136:../src/menu.cpp **** 			}
+ 137:../src/menu.cpp **** 			bottomEntry = redrawMenu(curLevel, topEntry, activeEntry, size);
+ 138:../src/menu.cpp **** 			isPushed[RIGHT_BUT] = 0;
+ 139:../src/menu.cpp **** 		}
+ 140:../src/menu.cpp **** 		if(isPushed[LEFT_BUT] == 1){
+ 141:../src/menu.cpp **** 			return;
+ 142:../src/menu.cpp **** 			isPushed[LEFT_BUT] = 0;
+ 143:../src/menu.cpp **** 		}
+ 144:../src/menu.cpp **** 	}*/
+ 145:../src/menu.cpp **** }
+ 418              		.loc 1 145 0
+ 419 000c 07F10C07 		add	r7, r7, #12
+ 420 0010 BD46     		mov	sp, r7
+ 421 0012 80BC     		pop	{r7}
+ 422 0014 7047     		bx	lr
+ 423              		.cfi_endproc
+ 424              	.LFE33:
+ 426 0016 00BF     		.section	.rodata._ZL10FontLookup,"a",%progbits
+ 427              		.align	2
+ 430              	_ZL10FontLookup:
+ 431 0000 00       		.byte	0
+ 432 0001 00       		.byte	0
+ 433 0002 00       		.byte	0
+ 434 0003 00       		.byte	0
+ 435 0004 00       		.byte	0
+ 436 0005 00       		.byte	0
+ 437 0006 00       		.byte	0
+ 438 0007 2F       		.byte	47
+ 439 0008 00       		.byte	0
+ 440 0009 00       		.byte	0
+ 441 000a 00       		.byte	0
+ 442 000b 07       		.byte	7
+ 443 000c 00       		.byte	0
+ 444 000d 07       		.byte	7
+ 445 000e 00       		.byte	0
+ 446 000f 14       		.byte	20
+ 447 0010 7F       		.byte	127
+ 448 0011 14       		.byte	20
+ 449 0012 7F       		.byte	127
+ 450 0013 14       		.byte	20
+ 451 0014 24       		.byte	36
+ 452 0015 2A       		.byte	42
+ 453 0016 7F       		.byte	127
+ 454 0017 2A       		.byte	42
+ 455 0018 12       		.byte	18
+ 456 0019 C4       		.byte	-60
+ 457 001a C8       		.byte	-56
+ 458 001b 10       		.byte	16
+ 459 001c 26       		.byte	38
+ 460 001d 46       		.byte	70
+ 461 001e 36       		.byte	54
+ 462 001f 49       		.byte	73
+ 463 0020 55       		.byte	85
+ 464 0021 22       		.byte	34
+ 465 0022 50       		.byte	80
+ 466 0023 00       		.byte	0
+ 467 0024 05       		.byte	5
+ 468 0025 03       		.byte	3
+ 469 0026 00       		.byte	0
+ 470 0027 00       		.byte	0
+ 471 0028 00       		.byte	0
+ 472 0029 1C       		.byte	28
+ 473 002a 22       		.byte	34
+ 474 002b 41       		.byte	65
+ 475 002c 00       		.byte	0
+ 476 002d 00       		.byte	0
+ 477 002e 41       		.byte	65
+ 478 002f 22       		.byte	34
+ 479 0030 1C       		.byte	28
+ 480 0031 00       		.byte	0
+ 481 0032 14       		.byte	20
+ 482 0033 08       		.byte	8
+ 483 0034 3E       		.byte	62
+ 484 0035 08       		.byte	8
+ 485 0036 14       		.byte	20
+ 486 0037 08       		.byte	8
+ 487 0038 08       		.byte	8
+ 488 0039 3E       		.byte	62
+ 489 003a 08       		.byte	8
+ 490 003b 08       		.byte	8
+ 491 003c 00       		.byte	0
+ 492 003d 00       		.byte	0
+ 493 003e 50       		.byte	80
+ 494 003f 30       		.byte	48
+ 495 0040 00       		.byte	0
+ 496 0041 10       		.byte	16
+ 497 0042 10       		.byte	16
+ 498 0043 10       		.byte	16
+ 499 0044 10       		.byte	16
+ 500 0045 10       		.byte	16
+ 501 0046 00       		.byte	0
+ 502 0047 60       		.byte	96
+ 503 0048 60       		.byte	96
+ 504 0049 00       		.byte	0
+ 505 004a 00       		.byte	0
+ 506 004b 20       		.byte	32
+ 507 004c 10       		.byte	16
+ 508 004d 08       		.byte	8
+ 509 004e 04       		.byte	4
+ 510 004f 02       		.byte	2
+ 511 0050 3E       		.byte	62
+ 512 0051 51       		.byte	81
+ 513 0052 49       		.byte	73
+ 514 0053 45       		.byte	69
+ 515 0054 3E       		.byte	62
+ 516 0055 00       		.byte	0
+ 517 0056 42       		.byte	66
+ 518 0057 7F       		.byte	127
+ 519 0058 40       		.byte	64
+ 520 0059 00       		.byte	0
+ 521 005a 42       		.byte	66
+ 522 005b 61       		.byte	97
+ 523 005c 51       		.byte	81
+ 524 005d 49       		.byte	73
+ 525 005e 46       		.byte	70
+ 526 005f 21       		.byte	33
+ 527 0060 41       		.byte	65
+ 528 0061 45       		.byte	69
+ 529 0062 4B       		.byte	75
+ 530 0063 31       		.byte	49
+ 531 0064 18       		.byte	24
+ 532 0065 14       		.byte	20
+ 533 0066 12       		.byte	18
+ 534 0067 7F       		.byte	127
+ 535 0068 10       		.byte	16
+ 536 0069 27       		.byte	39
+ 537 006a 45       		.byte	69
+ 538 006b 45       		.byte	69
+ 539 006c 45       		.byte	69
+ 540 006d 39       		.byte	57
+ 541 006e 3C       		.byte	60
+ 542 006f 4A       		.byte	74
+ 543 0070 49       		.byte	73
+ 544 0071 49       		.byte	73
+ 545 0072 30       		.byte	48
+ 546 0073 01       		.byte	1
+ 547 0074 71       		.byte	113
+ 548 0075 09       		.byte	9
+ 549 0076 05       		.byte	5
+ 550 0077 03       		.byte	3
+ 551 0078 36       		.byte	54
+ 552 0079 49       		.byte	73
+ 553 007a 49       		.byte	73
+ 554 007b 49       		.byte	73
+ 555 007c 36       		.byte	54
+ 556 007d 06       		.byte	6
+ 557 007e 49       		.byte	73
+ 558 007f 49       		.byte	73
+ 559 0080 29       		.byte	41
+ 560 0081 1E       		.byte	30
+ 561 0082 00       		.byte	0
+ 562 0083 36       		.byte	54
+ 563 0084 36       		.byte	54
+ 564 0085 00       		.byte	0
+ 565 0086 00       		.byte	0
+ 566 0087 00       		.byte	0
+ 567 0088 56       		.byte	86
+ 568 0089 36       		.byte	54
+ 569 008a 00       		.byte	0
+ 570 008b 00       		.byte	0
+ 571 008c 08       		.byte	8
+ 572 008d 14       		.byte	20
+ 573 008e 22       		.byte	34
+ 574 008f 41       		.byte	65
+ 575 0090 00       		.byte	0
+ 576 0091 14       		.byte	20
+ 577 0092 14       		.byte	20
+ 578 0093 14       		.byte	20
+ 579 0094 14       		.byte	20
+ 580 0095 14       		.byte	20
+ 581 0096 00       		.byte	0
+ 582 0097 41       		.byte	65
+ 583 0098 22       		.byte	34
+ 584 0099 14       		.byte	20
+ 585 009a 08       		.byte	8
+ 586 009b 02       		.byte	2
+ 587 009c 01       		.byte	1
+ 588 009d 51       		.byte	81
+ 589 009e 09       		.byte	9
+ 590 009f 06       		.byte	6
+ 591 00a0 32       		.byte	50
+ 592 00a1 49       		.byte	73
+ 593 00a2 59       		.byte	89
+ 594 00a3 51       		.byte	81
+ 595 00a4 3E       		.byte	62
+ 596 00a5 7E       		.byte	126
+ 597 00a6 11       		.byte	17
+ 598 00a7 11       		.byte	17
+ 599 00a8 11       		.byte	17
+ 600 00a9 7E       		.byte	126
+ 601 00aa 7F       		.byte	127
+ 602 00ab 49       		.byte	73
+ 603 00ac 49       		.byte	73
+ 604 00ad 49       		.byte	73
+ 605 00ae 36       		.byte	54
+ 606 00af 3E       		.byte	62
+ 607 00b0 41       		.byte	65
+ 608 00b1 41       		.byte	65
+ 609 00b2 41       		.byte	65
+ 610 00b3 22       		.byte	34
+ 611 00b4 7F       		.byte	127
+ 612 00b5 41       		.byte	65
+ 613 00b6 41       		.byte	65
+ 614 00b7 22       		.byte	34
+ 615 00b8 1C       		.byte	28
+ 616 00b9 7F       		.byte	127
+ 617 00ba 49       		.byte	73
+ 618 00bb 49       		.byte	73
+ 619 00bc 49       		.byte	73
+ 620 00bd 41       		.byte	65
+ 621 00be 7F       		.byte	127
+ 622 00bf 09       		.byte	9
+ 623 00c0 09       		.byte	9
+ 624 00c1 09       		.byte	9
+ 625 00c2 01       		.byte	1
+ 626 00c3 3E       		.byte	62
+ 627 00c4 41       		.byte	65
+ 628 00c5 49       		.byte	73
+ 629 00c6 49       		.byte	73
+ 630 00c7 7A       		.byte	122
+ 631 00c8 7F       		.byte	127
+ 632 00c9 08       		.byte	8
+ 633 00ca 08       		.byte	8
+ 634 00cb 08       		.byte	8
+ 635 00cc 7F       		.byte	127
+ 636 00cd 00       		.byte	0
+ 637 00ce 41       		.byte	65
+ 638 00cf 7F       		.byte	127
+ 639 00d0 41       		.byte	65
+ 640 00d1 00       		.byte	0
+ 641 00d2 20       		.byte	32
+ 642 00d3 40       		.byte	64
+ 643 00d4 41       		.byte	65
+ 644 00d5 3F       		.byte	63
+ 645 00d6 01       		.byte	1
+ 646 00d7 7F       		.byte	127
+ 647 00d8 08       		.byte	8
+ 648 00d9 14       		.byte	20
+ 649 00da 22       		.byte	34
+ 650 00db 41       		.byte	65
+ 651 00dc 7F       		.byte	127
+ 652 00dd 40       		.byte	64
+ 653 00de 40       		.byte	64
+ 654 00df 40       		.byte	64
+ 655 00e0 40       		.byte	64
+ 656 00e1 7F       		.byte	127
+ 657 00e2 02       		.byte	2
+ 658 00e3 0C       		.byte	12
+ 659 00e4 02       		.byte	2
+ 660 00e5 7F       		.byte	127
+ 661 00e6 7F       		.byte	127
+ 662 00e7 04       		.byte	4
+ 663 00e8 08       		.byte	8
+ 664 00e9 10       		.byte	16
+ 665 00ea 7F       		.byte	127
+ 666 00eb 3E       		.byte	62
+ 667 00ec 41       		.byte	65
+ 668 00ed 41       		.byte	65
+ 669 00ee 41       		.byte	65
+ 670 00ef 3E       		.byte	62
+ 671 00f0 7F       		.byte	127
+ 672 00f1 09       		.byte	9
+ 673 00f2 09       		.byte	9
+ 674 00f3 09       		.byte	9
+ 675 00f4 06       		.byte	6
+ 676 00f5 3E       		.byte	62
+ 677 00f6 41       		.byte	65
+ 678 00f7 51       		.byte	81
+ 679 00f8 21       		.byte	33
+ 680 00f9 5E       		.byte	94
+ 681 00fa 7F       		.byte	127
+ 682 00fb 09       		.byte	9
+ 683 00fc 19       		.byte	25
+ 684 00fd 29       		.byte	41
+ 685 00fe 46       		.byte	70
+ 686 00ff 46       		.byte	70
+ 687 0100 49       		.byte	73
+ 688 0101 49       		.byte	73
+ 689 0102 49       		.byte	73
+ 690 0103 31       		.byte	49
+ 691 0104 01       		.byte	1
+ 692 0105 01       		.byte	1
+ 693 0106 7F       		.byte	127
+ 694 0107 01       		.byte	1
+ 695 0108 01       		.byte	1
+ 696 0109 3F       		.byte	63
+ 697 010a 40       		.byte	64
+ 698 010b 40       		.byte	64
+ 699 010c 40       		.byte	64
+ 700 010d 3F       		.byte	63
+ 701 010e 1F       		.byte	31
+ 702 010f 20       		.byte	32
+ 703 0110 40       		.byte	64
+ 704 0111 20       		.byte	32
+ 705 0112 1F       		.byte	31
+ 706 0113 3F       		.byte	63
+ 707 0114 40       		.byte	64
+ 708 0115 38       		.byte	56
+ 709 0116 40       		.byte	64
+ 710 0117 3F       		.byte	63
+ 711 0118 63       		.byte	99
+ 712 0119 14       		.byte	20
+ 713 011a 08       		.byte	8
+ 714 011b 14       		.byte	20
+ 715 011c 63       		.byte	99
+ 716 011d 07       		.byte	7
+ 717 011e 08       		.byte	8
+ 718 011f 70       		.byte	112
+ 719 0120 08       		.byte	8
+ 720 0121 07       		.byte	7
+ 721 0122 61       		.byte	97
+ 722 0123 51       		.byte	81
+ 723 0124 49       		.byte	73
+ 724 0125 45       		.byte	69
+ 725 0126 43       		.byte	67
+ 726 0127 00       		.byte	0
+ 727 0128 7F       		.byte	127
+ 728 0129 41       		.byte	65
+ 729 012a 41       		.byte	65
+ 730 012b 00       		.byte	0
+ 731 012c 55       		.byte	85
+ 732 012d 2A       		.byte	42
+ 733 012e 55       		.byte	85
+ 734 012f 2A       		.byte	42
+ 735 0130 55       		.byte	85
+ 736 0131 00       		.byte	0
+ 737 0132 41       		.byte	65
+ 738 0133 41       		.byte	65
+ 739 0134 7F       		.byte	127
+ 740 0135 00       		.byte	0
+ 741 0136 04       		.byte	4
+ 742 0137 02       		.byte	2
+ 743 0138 01       		.byte	1
+ 744 0139 02       		.byte	2
+ 745 013a 04       		.byte	4
+ 746 013b 40       		.byte	64
+ 747 013c 40       		.byte	64
+ 748 013d 40       		.byte	64
+ 749 013e 40       		.byte	64
+ 750 013f 40       		.byte	64
+ 751 0140 00       		.byte	0
+ 752 0141 01       		.byte	1
+ 753 0142 02       		.byte	2
+ 754 0143 04       		.byte	4
+ 755 0144 00       		.byte	0
+ 756 0145 20       		.byte	32
+ 757 0146 54       		.byte	84
+ 758 0147 54       		.byte	84
+ 759 0148 54       		.byte	84
+ 760 0149 78       		.byte	120
+ 761 014a 7F       		.byte	127
+ 762 014b 48       		.byte	72
+ 763 014c 44       		.byte	68
+ 764 014d 44       		.byte	68
+ 765 014e 38       		.byte	56
+ 766 014f 38       		.byte	56
+ 767 0150 44       		.byte	68
+ 768 0151 44       		.byte	68
+ 769 0152 44       		.byte	68
+ 770 0153 20       		.byte	32
+ 771 0154 38       		.byte	56
+ 772 0155 44       		.byte	68
+ 773 0156 44       		.byte	68
+ 774 0157 48       		.byte	72
+ 775 0158 7F       		.byte	127
+ 776 0159 38       		.byte	56
+ 777 015a 54       		.byte	84
+ 778 015b 54       		.byte	84
+ 779 015c 54       		.byte	84
+ 780 015d 18       		.byte	24
+ 781 015e 08       		.byte	8
+ 782 015f 7E       		.byte	126
+ 783 0160 09       		.byte	9
+ 784 0161 01       		.byte	1
+ 785 0162 02       		.byte	2
+ 786 0163 0C       		.byte	12
+ 787 0164 52       		.byte	82
+ 788 0165 52       		.byte	82
+ 789 0166 52       		.byte	82
+ 790 0167 3E       		.byte	62
+ 791 0168 7F       		.byte	127
+ 792 0169 08       		.byte	8
+ 793 016a 04       		.byte	4
+ 794 016b 04       		.byte	4
+ 795 016c 78       		.byte	120
+ 796 016d 00       		.byte	0
+ 797 016e 44       		.byte	68
+ 798 016f 7D       		.byte	125
+ 799 0170 40       		.byte	64
+ 800 0171 00       		.byte	0
+ 801 0172 20       		.byte	32
+ 802 0173 40       		.byte	64
+ 803 0174 44       		.byte	68
+ 804 0175 3D       		.byte	61
+ 805 0176 00       		.byte	0
+ 806 0177 7F       		.byte	127
+ 807 0178 10       		.byte	16
+ 808 0179 28       		.byte	40
+ 809 017a 44       		.byte	68
+ 810 017b 00       		.byte	0
+ 811 017c 00       		.byte	0
+ 812 017d 41       		.byte	65
+ 813 017e 7F       		.byte	127
+ 814 017f 40       		.byte	64
+ 815 0180 00       		.byte	0
+ 816 0181 7C       		.byte	124
+ 817 0182 04       		.byte	4
+ 818 0183 18       		.byte	24
+ 819 0184 04       		.byte	4
+ 820 0185 78       		.byte	120
+ 821 0186 7C       		.byte	124
+ 822 0187 08       		.byte	8
+ 823 0188 04       		.byte	4
+ 824 0189 04       		.byte	4
+ 825 018a 78       		.byte	120
+ 826 018b 38       		.byte	56
+ 827 018c 44       		.byte	68
+ 828 018d 44       		.byte	68
+ 829 018e 44       		.byte	68
+ 830 018f 38       		.byte	56
+ 831 0190 7C       		.byte	124
+ 832 0191 14       		.byte	20
+ 833 0192 14       		.byte	20
+ 834 0193 14       		.byte	20
+ 835 0194 08       		.byte	8
+ 836 0195 08       		.byte	8
+ 837 0196 14       		.byte	20
+ 838 0197 14       		.byte	20
+ 839 0198 18       		.byte	24
+ 840 0199 7C       		.byte	124
+ 841 019a 7C       		.byte	124
+ 842 019b 08       		.byte	8
+ 843 019c 04       		.byte	4
+ 844 019d 04       		.byte	4
+ 845 019e 08       		.byte	8
+ 846 019f 48       		.byte	72
+ 847 01a0 54       		.byte	84
+ 848 01a1 54       		.byte	84
+ 849 01a2 54       		.byte	84
+ 850 01a3 20       		.byte	32
+ 851 01a4 04       		.byte	4
+ 852 01a5 3F       		.byte	63
+ 853 01a6 44       		.byte	68
+ 854 01a7 40       		.byte	64
+ 855 01a8 20       		.byte	32
+ 856 01a9 3C       		.byte	60
+ 857 01aa 40       		.byte	64
+ 858 01ab 40       		.byte	64
+ 859 01ac 20       		.byte	32
+ 860 01ad 7C       		.byte	124
+ 861 01ae 1C       		.byte	28
+ 862 01af 20       		.byte	32
+ 863 01b0 40       		.byte	64
+ 864 01b1 20       		.byte	32
+ 865 01b2 1C       		.byte	28
+ 866 01b3 3C       		.byte	60
+ 867 01b4 40       		.byte	64
+ 868 01b5 30       		.byte	48
+ 869 01b6 40       		.byte	64
+ 870 01b7 3C       		.byte	60
+ 871 01b8 44       		.byte	68
+ 872 01b9 28       		.byte	40
+ 873 01ba 10       		.byte	16
+ 874 01bb 28       		.byte	40
+ 875 01bc 44       		.byte	68
+ 876 01bd 0C       		.byte	12
+ 877 01be 50       		.byte	80
+ 878 01bf 50       		.byte	80
+ 879 01c0 50       		.byte	80
+ 880 01c1 3C       		.byte	60
+ 881 01c2 44       		.byte	68
+ 882 01c3 64       		.byte	100
+ 883 01c4 54       		.byte	84
+ 884 01c5 4C       		.byte	76
+ 885 01c6 44       		.byte	68
+ 886 01c7 00       		.section	.rodata._ZL10mainLevel1,"a",%progbits
+ 887              		.align	2
+ 890              	_ZL10mainLevel1:
+ 891 0000 54657374 		.ascii	"Testy\000"
+ 891      7900
+ 892 0006 0000     		.section	.rodata._ZL10mainLevel2,"a",%progbits
+ 893              		.align	2
+ 896              	_ZL10mainLevel2:
+ 897 0000 54727962 		.ascii	"Tryby\000"
+ 897      7900
+ 898 0006 0000     		.section	.rodata._ZL10testsMenu1,"a",%progbits
+ 899              		.align	2
+ 902              	_ZL10testsMenu1:
+ 903 0000 53686172 		.ascii	"Sharp\000"
+ 903      7000
+ 904 0006 0000     		.section	.rodata._ZL10testsMenu2,"a",%progbits
+ 905              		.align	2
+ 908              	_ZL10testsMenu2:
+ 909 0000 437A756A 		.ascii	"Czujnik linii\000"
+ 909      6E696B20 
+ 909      6C696E69 
+ 909      6900
+ 910 000e 0000     		.section	.rodata._ZL10testsMenu3,"a",%progbits
+ 911              		.align	2
+ 914              	_ZL10testsMenu3:
+ 915 0000 53696C6E 		.ascii	"Silnik\000"
+ 915      696B00
+ 916 0007 00       		.text
+ 917              	.Letext0:
+ 918              		.file 2 "/home/jachu/elektronika/STM32/gcc-arm-none-eabi-4_6-2012q4/bin/../lib/gcc/arm-none-eabi/4
+ 919              		.file 3 "../src/menu.h"
+ 920              		.file 4 "../src/lcd.h"
+ 921              		.file 5 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupp
+DEFINED SYMBOLS
+                            *ABS*:00000000 menu.cpp
+     /tmp/ccfXAA6x.s:19     .text._Z8testFuncv:00000000 $t
+     /tmp/ccfXAA6x.s:24     .text._Z8testFuncv:00000000 _Z8testFuncv
+     /tmp/ccfXAA6x.s:51     .data.testsLevel:00000000 testsLevel
+     /tmp/ccfXAA6x.s:48     .data.testsLevel:00000000 $d
+     /tmp/ccfXAA6x.s:902    .rodata._ZL10testsMenu1:00000000 _ZL10testsMenu1
+     /tmp/ccfXAA6x.s:78     .data.mainLevel:00000000 mainLevel
+     /tmp/ccfXAA6x.s:75     .data.mainLevel:00000000 $d
+     /tmp/ccfXAA6x.s:890    .rodata._ZL10mainLevel1:00000000 _ZL10mainLevel1
+     /tmp/ccfXAA6x.s:896    .rodata._ZL10mainLevel2:00000000 _ZL10mainLevel2
+     /tmp/ccfXAA6x.s:97     .data.mainLevelSize:00000000 mainLevelSize
+     /tmp/ccfXAA6x.s:100    .text._Z12numEntryRowsh:00000000 $t
+     /tmp/ccfXAA6x.s:105    .text._Z12numEntryRowsh:00000000 _Z12numEntryRowsh
+     /tmp/ccfXAA6x.s:147    .text._Z15markActiveEntryhh:00000000 $t
+     /tmp/ccfXAA6x.s:152    .text._Z15markActiveEntryhh:00000000 _Z15markActiveEntryhh
+     /tmp/ccfXAA6x.s:201    .text._Z10redrawMenuP9menuentryhhh:00000000 $t
+     /tmp/ccfXAA6x.s:206    .text._Z10redrawMenuP9menuentryhhh:00000000 _Z10redrawMenuP9menuentryhhh
+     /tmp/ccfXAA6x.s:393    .text._Z11displayMenuP9menuentryh:00000000 $t
+     /tmp/ccfXAA6x.s:398    .text._Z11displayMenuP9menuentryh:00000000 _Z11displayMenuP9menuentryh
+     /tmp/ccfXAA6x.s:427    .rodata._ZL10FontLookup:00000000 $d
+     /tmp/ccfXAA6x.s:430    .rodata._ZL10FontLookup:00000000 _ZL10FontLookup
+     /tmp/ccfXAA6x.s:887    .rodata._ZL10mainLevel1:00000000 $d
+     /tmp/ccfXAA6x.s:893    .rodata._ZL10mainLevel2:00000000 $d
+     /tmp/ccfXAA6x.s:899    .rodata._ZL10testsMenu1:00000000 $d
+     /tmp/ccfXAA6x.s:905    .rodata._ZL10testsMenu2:00000000 $d
+     /tmp/ccfXAA6x.s:908    .rodata._ZL10testsMenu2:00000000 _ZL10testsMenu2
+     /tmp/ccfXAA6x.s:911    .rodata._ZL10testsMenu3:00000000 $d
+     /tmp/ccfXAA6x.s:914    .rodata._ZL10testsMenu3:00000000 _ZL10testsMenu3
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+_Z12LcdSingleBarhhhh12LcdPixelMode
+_Z8LcdClearv
+_Z13LcdGotoXYFonthh
+strcpy
+_Z6LcdChr11LcdFontSizeh
+_Z9LcdUpdatev

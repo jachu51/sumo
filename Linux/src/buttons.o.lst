@@ -1,0 +1,202 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 6
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"buttons.cpp"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.global	isPushed
+  19              		.section	.bss.isPushed,"aw",%nobits
+  20              		.align	2
+  23              	isPushed:
+  24 0000 00000000 		.space	5
+  24      00
+  25              		.global	isHeld
+  26 0005 000000   		.section	.bss.isHeld,"aw",%nobits
+  27              		.align	2
+  30              	isHeld:
+  31 0000 00000000 		.space	5
+  31      00
+  32              		.global	cntPushed
+  33 0005 000000   		.section	.bss.cntPushed,"aw",%nobits
+  34              		.align	2
+  37              	cntPushed:
+  38 0000 00000000 		.space	5
+  38      00
+  39              		.global	wasHeld
+  40 0005 000000   		.section	.bss.wasHeld,"aw",%nobits
+  41              		.align	2
+  44              	wasHeld:
+  45 0000 00000000 		.space	5
+  45      00
+  46 0005 000000   		.section	.text._Z11initButtonsv,"ax",%progbits
+  47              		.align	2
+  48              		.global	_Z11initButtonsv
+  49              		.thumb
+  50              		.thumb_func
+  52              	_Z11initButtonsv:
+  53              	.LFB31:
+  54              		.file 1 "../src/buttons.cpp"
+   1:../src/buttons.cpp **** /*
+   2:../src/buttons.cpp ****  * buttons.c
+   3:../src/buttons.cpp ****  *
+   4:../src/buttons.cpp ****  * Created: 2011-05-18 22:54:01
+   5:../src/buttons.cpp ****  *  Author: Jachu
+   6:../src/buttons.cpp ****  */ 
+   7:../src/buttons.cpp **** #include "sys.h"
+   8:../src/buttons.cpp **** #include "buttons.h"
+   9:../src/buttons.cpp **** 
+  10:../src/buttons.cpp **** #define THRESHOLD 5
+  11:../src/buttons.cpp **** #define THRESHOLD_HOLD 200
+  12:../src/buttons.cpp **** 
+  13:../src/buttons.cpp **** volatile uint8_t isPushed[BUTTONS_NUM];
+  14:../src/buttons.cpp **** volatile uint8_t isHeld[BUTTONS_NUM];
+  15:../src/buttons.cpp **** volatile uint8_t cntPushed[BUTTONS_NUM];
+  16:../src/buttons.cpp **** volatile uint8_t wasHeld[BUTTONS_NUM];
+  17:../src/buttons.cpp **** //const uint8_t pinNum[BUTTONS_NUM] = {0, 1, 2, 3};
+  18:../src/buttons.cpp **** //void (*handlersPushed[BUTTONS_NUM])(void) = {handleButton1Pushed, handleButton2Pushed, handleButt
+  19:../src/buttons.cpp **** //void (*handlersHeld[BUTTONS_NUM])(void) = {handleButton1Held, handleButton2Held, handleButton3Hel
+  20:../src/buttons.cpp **** 
+  21:../src/buttons.cpp **** /*ISR(TCC1_OVF_vect){
+  22:../src/buttons.cpp **** 	int i;
+  23:../src/buttons.cpp **** 	for(i = 0; i < BUTTONS_NUM; i++){
+  24:../src/buttons.cpp **** 		if(!(PORTE_IN & (1<<pinNum[i]))){
+  25:../src/buttons.cpp **** 			cntPushed[i]++;
+  26:../src/buttons.cpp **** 		}
+  27:../src/buttons.cpp **** 		else{
+  28:../src/buttons.cpp **** 			if(cntPushed[i] > THRESHOLD && wasHeld[i] == 0){
+  29:../src/buttons.cpp **** 				isPushed[i] = 1;
+  30:../src/buttons.cpp **** 			}
+  31:../src/buttons.cpp **** 			wasHeld[i] = 0;
+  32:../src/buttons.cpp **** 			cntPushed[i] = 0;
+  33:../src/buttons.cpp **** 		}
+  34:../src/buttons.cpp **** 		if(cntPushed[i] >= THRESHOLD_HOLD){
+  35:../src/buttons.cpp **** 			isHeld[i] = 1;
+  36:../src/buttons.cpp **** 			cntPushed[i] = 0;
+  37:../src/buttons.cpp **** 			wasHeld[i] = 1;
+  38:../src/buttons.cpp **** 		}
+  39:../src/buttons.cpp **** 	}
+  40:../src/buttons.cpp **** }*/
+  41:../src/buttons.cpp **** 
+  42:../src/buttons.cpp **** 
+  43:../src/buttons.cpp **** void initButtons(){
+  55              		.loc 1 43 0
+  56              		.cfi_startproc
+  57              		@ args = 0, pretend = 0, frame = 8
+  58              		@ frame_needed = 1, uses_anonymous_args = 0
+  59              		@ link register save eliminated.
+  60 0000 80B4     		push	{r7}
+  61              	.LCFI0:
+  62              		.cfi_def_cfa_offset 4
+  63              		.cfi_offset 7, -4
+  64 0002 83B0     		sub	sp, sp, #12
+  65              	.LCFI1:
+  66              		.cfi_def_cfa_offset 16
+  67 0004 00AF     		add	r7, sp, #0
+  68              	.LCFI2:
+  69              		.cfi_def_cfa_register 7
+  70              	.LBB2:
+  44:../src/buttons.cpp **** 	/*PORTE_PIN0CTRL = PORT_OPC_PULLUP_gc;
+  45:../src/buttons.cpp **** 	PORTE_PIN1CTRL = PORT_OPC_PULLUP_gc;
+  46:../src/buttons.cpp **** 	PORTE_PIN2CTRL = PORT_OPC_PULLUP_gc;
+  47:../src/buttons.cpp **** 	PORTE_PIN3CTRL = PORT_OPC_PULLUP_gc;
+  48:../src/buttons.cpp **** 	PMIC_CTRL = PMIC_LOLVLEN_bm;
+  49:../src/buttons.cpp **** 	sei();
+  50:../src/buttons.cpp **** 	TCC1_CTRLA = TC_CLKSEL_DIV1024_gc;
+  51:../src/buttons.cpp **** 	TCC1_CTRLB = TC_WGMODE_NORMAL_gc;
+  52:../src/buttons.cpp **** 	TCC1_INTCTRLA = TC_OVFINTLVL_LO_gc;
+  53:../src/buttons.cpp **** 	TCC1_PER = 312;
+  54:../src/buttons.cpp **** 	*/
+  55:../src/buttons.cpp **** 	int i;
+  56:../src/buttons.cpp **** 	for(i = 0; i < BUTTONS_NUM; i++){
+  71              		.loc 1 56 0
+  72 0006 4FF00003 		mov	r3, #0
+  73 000a 7B60     		str	r3, [r7, #4]
+  74 000c 27E0     		b	.L2
+  75              	.L3:
+  57:../src/buttons.cpp **** 		cntPushed[i] = 0;
+  76              		.loc 1 57 0 discriminator 2
+  77 000e 40F20003 		movw	r3, #:lower16:cntPushed
+  78 0012 C0F20003 		movt	r3, #:upper16:cntPushed
+  79 0016 7A68     		ldr	r2, [r7, #4]
+  80 0018 9B18     		adds	r3, r3, r2
+  81 001a 4FF00002 		mov	r2, #0
+  82 001e 1A70     		strb	r2, [r3, #0]
+  58:../src/buttons.cpp **** 		isPushed[i] = 0;
+  83              		.loc 1 58 0 discriminator 2
+  84 0020 40F20003 		movw	r3, #:lower16:isPushed
+  85 0024 C0F20003 		movt	r3, #:upper16:isPushed
+  86 0028 7A68     		ldr	r2, [r7, #4]
+  87 002a 9B18     		adds	r3, r3, r2
+  88 002c 4FF00002 		mov	r2, #0
+  89 0030 1A70     		strb	r2, [r3, #0]
+  59:../src/buttons.cpp **** 		isHeld[i] = 0;
+  90              		.loc 1 59 0 discriminator 2
+  91 0032 40F20003 		movw	r3, #:lower16:isHeld
+  92 0036 C0F20003 		movt	r3, #:upper16:isHeld
+  93 003a 7A68     		ldr	r2, [r7, #4]
+  94 003c 9B18     		adds	r3, r3, r2
+  95 003e 4FF00002 		mov	r2, #0
+  96 0042 1A70     		strb	r2, [r3, #0]
+  60:../src/buttons.cpp **** 		wasHeld[i] = 0;
+  97              		.loc 1 60 0 discriminator 2
+  98 0044 40F20003 		movw	r3, #:lower16:wasHeld
+  99 0048 C0F20003 		movt	r3, #:upper16:wasHeld
+ 100 004c 7A68     		ldr	r2, [r7, #4]
+ 101 004e 9B18     		adds	r3, r3, r2
+ 102 0050 4FF00002 		mov	r2, #0
+ 103 0054 1A70     		strb	r2, [r3, #0]
+  56:../src/buttons.cpp **** 	for(i = 0; i < BUTTONS_NUM; i++){
+ 104              		.loc 1 56 0 discriminator 2
+ 105 0056 7B68     		ldr	r3, [r7, #4]
+ 106 0058 03F10103 		add	r3, r3, #1
+ 107 005c 7B60     		str	r3, [r7, #4]
+ 108              	.L2:
+  56:../src/buttons.cpp **** 	for(i = 0; i < BUTTONS_NUM; i++){
+ 109              		.loc 1 56 0 is_stmt 0 discriminator 1
+ 110 005e 7B68     		ldr	r3, [r7, #4]
+ 111 0060 042B     		cmp	r3, #4
+ 112 0062 CCBF     		ite	gt
+ 113 0064 0023     		movgt	r3, #0
+ 114 0066 0123     		movle	r3, #1
+ 115 0068 DBB2     		uxtb	r3, r3
+ 116 006a 002B     		cmp	r3, #0
+ 117 006c CFD1     		bne	.L3
+ 118              	.LBE2:
+  61:../src/buttons.cpp **** 	}
+  62:../src/buttons.cpp **** }
+ 119              		.loc 1 62 0 is_stmt 1
+ 120 006e 07F10C07 		add	r7, r7, #12
+ 121 0072 BD46     		mov	sp, r7
+ 122 0074 80BC     		pop	{r7}
+ 123 0076 7047     		bx	lr
+ 124              		.cfi_endproc
+ 125              	.LFE31:
+ 127              		.text
+ 128              	.Letext0:
+ 129              		.file 2 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupp
+DEFINED SYMBOLS
+                            *ABS*:00000000 buttons.cpp
+     /tmp/ccmfLfy6.s:23     .bss.isPushed:00000000 isPushed
+     /tmp/ccmfLfy6.s:20     .bss.isPushed:00000000 $d
+     /tmp/ccmfLfy6.s:30     .bss.isHeld:00000000 isHeld
+     /tmp/ccmfLfy6.s:27     .bss.isHeld:00000000 $d
+     /tmp/ccmfLfy6.s:37     .bss.cntPushed:00000000 cntPushed
+     /tmp/ccmfLfy6.s:34     .bss.cntPushed:00000000 $d
+     /tmp/ccmfLfy6.s:44     .bss.wasHeld:00000000 wasHeld
+     /tmp/ccmfLfy6.s:41     .bss.wasHeld:00000000 $d
+     /tmp/ccmfLfy6.s:47     .text._Z11initButtonsv:00000000 $t
+     /tmp/ccmfLfy6.s:52     .text._Z11initButtonsv:00000000 _Z11initButtonsv
+                     .debug_frame:00000010 $d
+
+NO UNDEFINED SYMBOLS

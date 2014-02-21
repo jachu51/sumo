@@ -1,0 +1,1404 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 6
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"ctrl.cpp"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.global	ctrlBuffer
+  19              		.section	.bss.ctrlBuffer,"aw",%nobits
+  20              		.align	2
+  23              	ctrlBuffer:
+  24 0000 00000000 		.space	128
+  24      00000000 
+  24      00000000 
+  24      00000000 
+  24      00000000 
+  25              		.global	dmaBuffer
+  26              		.section	.bss.dmaBuffer,"aw",%nobits
+  27              		.align	2
+  30              	dmaBuffer:
+  31 0000 00000000 		.space	128
+  31      00000000 
+  31      00000000 
+  31      00000000 
+  31      00000000 
+  32              		.global	ctrlPos
+  33              		.section	.bss.ctrlPos,"aw",%nobits
+  36              	ctrlPos:
+  37 0000 00       		.space	1
+  38              		.section	.text._Z8ctrlInitv,"ax",%progbits
+  39              		.align	2
+  40              		.global	_Z8ctrlInitv
+  41              		.thumb
+  42              		.thumb_func
+  44              	_Z8ctrlInitv:
+  45              	.LFB31:
+  46              		.file 1 "../src/ctrl.cpp"
+   1:../src/ctrl.cpp **** /*
+   2:../src/ctrl.cpp ****  * ctrl.c
+   3:../src/ctrl.cpp ****  *
+   4:../src/ctrl.cpp ****  *  Created on: 26-12-2012
+   5:../src/ctrl.cpp ****  *      Author: jachu
+   6:../src/ctrl.cpp ****  */
+   7:../src/ctrl.cpp **** #include "ctrl.h"
+   8:../src/ctrl.cpp **** #include "motor.h"
+   9:../src/ctrl.cpp **** #include "sys.h"
+  10:../src/ctrl.cpp **** #include "adc.h"
+  11:../src/ctrl.cpp **** #include "stm32f10x_usart.h"
+  12:../src/ctrl.cpp **** #include "stm32f10x_dma.h"
+  13:../src/ctrl.cpp **** #include "stm32f10x_rcc.h"
+  14:../src/ctrl.cpp **** #include "stm32f10x_gpio.h"
+  15:../src/ctrl.cpp **** #include <stdio.h>
+  16:../src/ctrl.cpp **** #include <string.h>
+  17:../src/ctrl.cpp **** 
+  18:../src/ctrl.cpp **** #define SIZE 128
+  19:../src/ctrl.cpp **** #define DMA_Channel_RX DMA1_Channel5
+  20:../src/ctrl.cpp **** #define DMA_Channel_TX DMA1_Channel4
+  21:../src/ctrl.cpp **** 
+  22:../src/ctrl.cpp **** const char iRpm[] = "I RPM ";
+  23:../src/ctrl.cpp **** const char iCte[] = "I CTE ";
+  24:../src/ctrl.cpp **** const char iCur[] = "I CUR ";
+  25:../src/ctrl.cpp **** const char iMotV[] = "I VMOT ";
+  26:../src/ctrl.cpp **** const char mV[] = " V ";
+  27:../src/ctrl.cpp **** const char mP[] = " P ";
+  28:../src/ctrl.cpp **** const char mR[] = " R ";
+  29:../src/ctrl.cpp **** const char cStartV[] = " START VEL";
+  30:../src/ctrl.cpp **** const char cStartP[] = " START POS";
+  31:../src/ctrl.cpp **** const char cStop[] = " STOP";
+  32:../src/ctrl.cpp **** const char cShutdown[] = " SHUTDOWN";
+  33:../src/ctrl.cpp **** 
+  34:../src/ctrl.cpp **** char ctrlBuffer[SIZE];
+  35:../src/ctrl.cpp **** char dmaBuffer[SIZE];
+  36:../src/ctrl.cpp **** char ctrlPos;
+  37:../src/ctrl.cpp **** 
+  38:../src/ctrl.cpp **** void ctrlInit(){
+  47              		.loc 1 38 0
+  48              		.cfi_startproc
+  49              		@ args = 0, pretend = 0, frame = 64
+  50              		@ frame_needed = 1, uses_anonymous_args = 0
+  51 0000 80B5     		push	{r7, lr}
+  52              	.LCFI0:
+  53              		.cfi_def_cfa_offset 8
+  54              		.cfi_offset 14, -4
+  55              		.cfi_offset 7, -8
+  56 0002 90B0     		sub	sp, sp, #64
+  57              	.LCFI1:
+  58              		.cfi_def_cfa_offset 72
+  59 0004 00AF     		add	r7, sp, #0
+  60              	.LCFI2:
+  61              		.cfi_def_cfa_register 7
+  62              	.LBB2:
+  39:../src/ctrl.cpp **** 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+  63              		.loc 1 39 0
+  64 0006 4FF00400 		mov	r0, #4
+  65 000a 4FF00101 		mov	r1, #1
+  66 000e FFF7FEFF 		bl	RCC_APB2PeriphClockCmd
+  40:../src/ctrl.cpp **** 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+  67              		.loc 1 40 0
+  68 0012 4FF00100 		mov	r0, #1
+  69 0016 4FF00101 		mov	r1, #1
+  70 001a FFF7FEFF 		bl	RCC_APB2PeriphClockCmd
+  41:../src/ctrl.cpp **** 	GPIO_InitTypeDef gpioInit;
+  42:../src/ctrl.cpp **** 	gpioInit.GPIO_Pin = CTRL_TX;
+  71              		.loc 1 42 0
+  72 001e 4FF40073 		mov	r3, #512
+  73 0022 BB87     		strh	r3, [r7, #60]	@ movhi
+  43:../src/ctrl.cpp **** 	gpioInit.GPIO_Mode = GPIO_Mode_AF_PP;
+  74              		.loc 1 43 0
+  75 0024 4FF01803 		mov	r3, #24
+  76 0028 87F83F30 		strb	r3, [r7, #63]
+  44:../src/ctrl.cpp **** 	gpioInit.GPIO_Speed = GPIO_Speed_50MHz;
+  77              		.loc 1 44 0
+  78 002c 4FF00303 		mov	r3, #3
+  79 0030 87F83E30 		strb	r3, [r7, #62]
+  45:../src/ctrl.cpp **** 	GPIO_Init(GPIOA, &gpioInit);
+  80              		.loc 1 45 0
+  81 0034 07F13C03 		add	r3, r7, #60
+  82 0038 4FF40060 		mov	r0, #2048
+  83 003c C4F20100 		movt	r0, 16385
+  84 0040 1946     		mov	r1, r3
+  85 0042 FFF7FEFF 		bl	GPIO_Init
+  46:../src/ctrl.cpp **** 
+  47:../src/ctrl.cpp **** 	gpioInit.GPIO_Pin = CTRL_RX;
+  86              		.loc 1 47 0
+  87 0046 4FF48063 		mov	r3, #1024
+  88 004a BB87     		strh	r3, [r7, #60]	@ movhi
+  48:../src/ctrl.cpp **** 	gpioInit.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  89              		.loc 1 48 0
+  90 004c 4FF00403 		mov	r3, #4
+  91 0050 87F83F30 		strb	r3, [r7, #63]
+  49:../src/ctrl.cpp **** 	GPIO_Init(GPIOA, &gpioInit);
+  92              		.loc 1 49 0
+  93 0054 07F13C03 		add	r3, r7, #60
+  94 0058 4FF40060 		mov	r0, #2048
+  95 005c C4F20100 		movt	r0, 16385
+  96 0060 1946     		mov	r1, r3
+  97 0062 FFF7FEFF 		bl	GPIO_Init
+  50:../src/ctrl.cpp **** 
+  51:../src/ctrl.cpp **** 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+  98              		.loc 1 51 0
+  99 0066 4FF00100 		mov	r0, #1
+ 100 006a 4FF00101 		mov	r1, #1
+ 101 006e FFF7FEFF 		bl	RCC_AHBPeriphClockCmd
+  52:../src/ctrl.cpp **** 	DMA_InitTypeDef dmaInit;
+  53:../src/ctrl.cpp **** 	dmaInit.DMA_BufferSize = SIZE;
+ 102              		.loc 1 53 0
+ 103 0072 4FF08003 		mov	r3, #128
+ 104 0076 FB60     		str	r3, [r7, #12]
+  54:../src/ctrl.cpp **** 	dmaInit.DMA_DIR = DMA_DIR_PeripheralSRC;
+ 105              		.loc 1 54 0
+ 106 0078 4FF00003 		mov	r3, #0
+ 107 007c BB60     		str	r3, [r7, #8]
+  55:../src/ctrl.cpp **** 	dmaInit.DMA_M2M = DMA_M2M_Disable;
+ 108              		.loc 1 55 0
+ 109 007e 4FF00003 		mov	r3, #0
+ 110 0082 BB62     		str	r3, [r7, #40]
+  56:../src/ctrl.cpp **** 	dmaInit.DMA_MemoryBaseAddr = (uint32_t)(ctrlBuffer);
+ 111              		.loc 1 56 0
+ 112 0084 40F20003 		movw	r3, #:lower16:ctrlBuffer
+ 113 0088 C0F20003 		movt	r3, #:upper16:ctrlBuffer
+ 114 008c 7B60     		str	r3, [r7, #4]
+  57:../src/ctrl.cpp **** 	dmaInit.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+ 115              		.loc 1 57 0
+ 116 008e 4FF00003 		mov	r3, #0
+ 117 0092 FB61     		str	r3, [r7, #28]
+  58:../src/ctrl.cpp **** 	dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
+ 118              		.loc 1 58 0
+ 119 0094 4FF08003 		mov	r3, #128
+ 120 0098 7B61     		str	r3, [r7, #20]
+  59:../src/ctrl.cpp **** 	dmaInit.DMA_Mode = DMA_Mode_Circular;
+ 121              		.loc 1 59 0
+ 122 009a 4FF02003 		mov	r3, #32
+ 123 009e 3B62     		str	r3, [r7, #32]
+  60:../src/ctrl.cpp **** 	dmaInit.DMA_PeripheralBaseAddr = (uint32_t)&(USART1->DR);
+ 124              		.loc 1 60 0
+ 125 00a0 43F60403 		movw	r3, #14340
+ 126 00a4 C4F20103 		movt	r3, 16385
+ 127 00a8 3B60     		str	r3, [r7, #0]
+  61:../src/ctrl.cpp **** 	dmaInit.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+ 128              		.loc 1 61 0
+ 129 00aa 4FF00003 		mov	r3, #0
+ 130 00ae BB61     		str	r3, [r7, #24]
+  62:../src/ctrl.cpp **** 	dmaInit.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+ 131              		.loc 1 62 0
+ 132 00b0 4FF00003 		mov	r3, #0
+ 133 00b4 3B61     		str	r3, [r7, #16]
+  63:../src/ctrl.cpp **** 	dmaInit.DMA_Priority = DMA_Priority_Low;
+ 134              		.loc 1 63 0
+ 135 00b6 4FF00003 		mov	r3, #0
+ 136 00ba 7B62     		str	r3, [r7, #36]
+  64:../src/ctrl.cpp **** 	DMA_Init(DMA_Channel_RX, &dmaInit);
+ 137              		.loc 1 64 0
+ 138 00bc 3B46     		mov	r3, r7
+ 139 00be 4FF05800 		mov	r0, #88
+ 140 00c2 C4F20200 		movt	r0, 16386
+ 141 00c6 1946     		mov	r1, r3
+ 142 00c8 FFF7FEFF 		bl	DMA_Init
+  65:../src/ctrl.cpp **** 	ctrlPos = 0;
+ 143              		.loc 1 65 0
+ 144 00cc 40F20003 		movw	r3, #:lower16:ctrlPos
+ 145 00d0 C0F20003 		movt	r3, #:upper16:ctrlPos
+ 146 00d4 4FF00002 		mov	r2, #0
+ 147 00d8 1A70     		strb	r2, [r3, #0]
+  66:../src/ctrl.cpp **** 
+  67:../src/ctrl.cpp **** 	dmaInit.DMA_BufferSize = 0;
+ 148              		.loc 1 67 0
+ 149 00da 4FF00003 		mov	r3, #0
+ 150 00de FB60     		str	r3, [r7, #12]
+  68:../src/ctrl.cpp **** 	dmaInit.DMA_DIR = DMA_DIR_PeripheralDST;
+ 151              		.loc 1 68 0
+ 152 00e0 4FF01003 		mov	r3, #16
+ 153 00e4 BB60     		str	r3, [r7, #8]
+  69:../src/ctrl.cpp **** 	dmaInit.DMA_MemoryBaseAddr = (uint32_t)dmaBuffer;
+ 154              		.loc 1 69 0
+ 155 00e6 40F20003 		movw	r3, #:lower16:dmaBuffer
+ 156 00ea C0F20003 		movt	r3, #:upper16:dmaBuffer
+ 157 00ee 7B60     		str	r3, [r7, #4]
+  70:../src/ctrl.cpp **** 	dmaInit.DMA_Mode = DMA_Mode_Normal;
+ 158              		.loc 1 70 0
+ 159 00f0 4FF00003 		mov	r3, #0
+ 160 00f4 3B62     		str	r3, [r7, #32]
+  71:../src/ctrl.cpp **** 	DMA_Init(DMA_Channel_TX, &dmaInit);
+ 161              		.loc 1 71 0
+ 162 00f6 3B46     		mov	r3, r7
+ 163 00f8 4FF04400 		mov	r0, #68
+ 164 00fc C4F20200 		movt	r0, 16386
+ 165 0100 1946     		mov	r1, r3
+ 166 0102 FFF7FEFF 		bl	DMA_Init
+  72:../src/ctrl.cpp **** 
+  73:../src/ctrl.cpp **** 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+ 167              		.loc 1 73 0
+ 168 0106 4FF48040 		mov	r0, #16384
+ 169 010a 4FF00101 		mov	r1, #1
+ 170 010e FFF7FEFF 		bl	RCC_APB2PeriphClockCmd
+  74:../src/ctrl.cpp **** 	USART_InitTypeDef usartInit;
+  75:../src/ctrl.cpp **** 	usartInit.USART_BaudRate = 115200;
+ 171              		.loc 1 75 0
+ 172 0112 4FF4E133 		mov	r3, #115200
+ 173 0116 FB62     		str	r3, [r7, #44]
+  76:../src/ctrl.cpp **** 	usartInit.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+ 174              		.loc 1 76 0
+ 175 0118 4FF00003 		mov	r3, #0
+ 176 011c 3B87     		strh	r3, [r7, #56]	@ movhi
+  77:../src/ctrl.cpp **** 	usartInit.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+ 177              		.loc 1 77 0
+ 178 011e 4FF00C03 		mov	r3, #12
+ 179 0122 FB86     		strh	r3, [r7, #54]	@ movhi
+  78:../src/ctrl.cpp **** 	usartInit.USART_Parity = USART_Parity_Even;
+ 180              		.loc 1 78 0
+ 181 0124 4FF48063 		mov	r3, #1024
+ 182 0128 BB86     		strh	r3, [r7, #52]	@ movhi
+  79:../src/ctrl.cpp **** 	usartInit.USART_StopBits = USART_StopBits_1;
+ 183              		.loc 1 79 0
+ 184 012a 4FF00003 		mov	r3, #0
+ 185 012e 7B86     		strh	r3, [r7, #50]	@ movhi
+  80:../src/ctrl.cpp **** 	usartInit.USART_WordLength = USART_WordLength_9b;
+ 186              		.loc 1 80 0
+ 187 0130 4FF48053 		mov	r3, #4096
+ 188 0134 3B86     		strh	r3, [r7, #48]	@ movhi
+  81:../src/ctrl.cpp **** 	USART_Init(USART1, &usartInit);
+ 189              		.loc 1 81 0
+ 190 0136 07F12C03 		add	r3, r7, #44
+ 191 013a 4FF46050 		mov	r0, #14336
+ 192 013e C4F20100 		movt	r0, 16385
+ 193 0142 1946     		mov	r1, r3
+ 194 0144 FFF7FEFF 		bl	USART_Init
+  82:../src/ctrl.cpp **** 	USART_DMACmd(USART1, USART_DMAReq_Rx, ENABLE);
+ 195              		.loc 1 82 0
+ 196 0148 4FF46050 		mov	r0, #14336
+ 197 014c C4F20100 		movt	r0, 16385
+ 198 0150 4FF04001 		mov	r1, #64
+ 199 0154 4FF00102 		mov	r2, #1
+ 200 0158 FFF7FEFF 		bl	USART_DMACmd
+  83:../src/ctrl.cpp **** 	USART_DMACmd(USART1, USART_DMAReq_Tx, ENABLE);
+ 201              		.loc 1 83 0
+ 202 015c 4FF46050 		mov	r0, #14336
+ 203 0160 C4F20100 		movt	r0, 16385
+ 204 0164 4FF08001 		mov	r1, #128
+ 205 0168 4FF00102 		mov	r2, #1
+ 206 016c FFF7FEFF 		bl	USART_DMACmd
+  84:../src/ctrl.cpp **** 
+  85:../src/ctrl.cpp **** 	DMA_Cmd(DMA_Channel_RX, ENABLE);
+ 207              		.loc 1 85 0
+ 208 0170 4FF05800 		mov	r0, #88
+ 209 0174 C4F20200 		movt	r0, 16386
+ 210 0178 4FF00101 		mov	r1, #1
+ 211 017c FFF7FEFF 		bl	DMA_Cmd
+  86:../src/ctrl.cpp **** 	USART_Cmd(USART1, ENABLE);
+ 212              		.loc 1 86 0
+ 213 0180 4FF46050 		mov	r0, #14336
+ 214 0184 C4F20100 		movt	r0, 16385
+ 215 0188 4FF00101 		mov	r1, #1
+ 216 018c FFF7FEFF 		bl	USART_Cmd
+ 217              	.LBE2:
+  87:../src/ctrl.cpp **** }
+ 218              		.loc 1 87 0
+ 219 0190 07F14007 		add	r7, r7, #64
+ 220 0194 BD46     		mov	sp, r7
+ 221 0196 80BD     		pop	{r7, pc}
+ 222              		.cfi_endproc
+ 223              	.LFE31:
+ 225              		.section	.text._Z9ctrlCheckv,"ax",%progbits
+ 226              		.align	2
+ 227              		.global	_Z9ctrlCheckv
+ 228              		.thumb
+ 229              		.thumb_func
+ 231              	_Z9ctrlCheckv:
+ 232              	.LFB32:
+  88:../src/ctrl.cpp **** 
+  89:../src/ctrl.cpp **** int16_t ctrlCheck(){
+ 233              		.loc 1 89 0
+ 234              		.cfi_startproc
+ 235              		@ args = 0, pretend = 0, frame = 8
+ 236              		@ frame_needed = 1, uses_anonymous_args = 0
+ 237 0000 80B5     		push	{r7, lr}
+ 238              	.LCFI3:
+ 239              		.cfi_def_cfa_offset 8
+ 240              		.cfi_offset 14, -4
+ 241              		.cfi_offset 7, -8
+ 242 0002 82B0     		sub	sp, sp, #8
+ 243              	.LCFI4:
+ 244              		.cfi_def_cfa_offset 16
+ 245 0004 00AF     		add	r7, sp, #0
+ 246              	.LCFI5:
+ 247              		.cfi_def_cfa_register 7
+ 248              	.LBB3:
+  90:../src/ctrl.cpp **** 	int16_t bufEnd = SIZE - DMA_GetCurrDataCounter(DMA_Channel_RX);
+ 249              		.loc 1 90 0
+ 250 0006 4FF05800 		mov	r0, #88
+ 251 000a C4F20200 		movt	r0, 16386
+ 252 000e FFF7FEFF 		bl	DMA_GetCurrDataCounter
+ 253 0012 0346     		mov	r3, r0
+ 254 0014 C3F18003 		rsb	r3, r3, #128
+ 255 0018 9BB2     		uxth	r3, r3
+ 256 001a BB80     		strh	r3, [r7, #4]	@ movhi
+  91:../src/ctrl.cpp **** 	uint16_t curPos = ctrlPos;
+ 257              		.loc 1 91 0
+ 258 001c 40F20003 		movw	r3, #:lower16:ctrlPos
+ 259 0020 C0F20003 		movt	r3, #:upper16:ctrlPos
+ 260 0024 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 261 0026 FB80     		strh	r3, [r7, #6]	@ movhi
+  92:../src/ctrl.cpp **** 	while(curPos != bufEnd){
+ 262              		.loc 1 92 0
+ 263 0028 11E0     		b	.L3
+ 264              	.L6:
+  93:../src/ctrl.cpp **** 		if(ctrlBuffer[curPos] == '\n'){
+ 265              		.loc 1 93 0
+ 266 002a FA88     		ldrh	r2, [r7, #6]
+ 267 002c 40F20003 		movw	r3, #:lower16:ctrlBuffer
+ 268 0030 C0F20003 		movt	r3, #:upper16:ctrlBuffer
+ 269 0034 9B5C     		ldrb	r3, [r3, r2]	@ zero_extendqisi2
+ 270 0036 0A2B     		cmp	r3, #10
+ 271 0038 01D1     		bne	.L4
+  94:../src/ctrl.cpp **** 			return curPos;
+ 272              		.loc 1 94 0
+ 273 003a FB88     		ldrh	r3, [r7, #6]
+ 274 003c 13E0     		b	.L5
+ 275              	.L4:
+  95:../src/ctrl.cpp **** 		}
+  96:../src/ctrl.cpp **** 		curPos++;
+ 276              		.loc 1 96 0
+ 277 003e FB88     		ldrh	r3, [r7, #6]	@ movhi
+ 278 0040 03F10103 		add	r3, r3, #1
+ 279 0044 FB80     		strh	r3, [r7, #6]	@ movhi
+  97:../src/ctrl.cpp **** 		curPos %= SIZE;
+ 280              		.loc 1 97 0
+ 281 0046 FB88     		ldrh	r3, [r7, #6]	@ movhi
+ 282 0048 03F07F03 		and	r3, r3, #127
+ 283 004c FB80     		strh	r3, [r7, #6]	@ movhi
+ 284              	.L3:
+  92:../src/ctrl.cpp **** 	while(curPos != bufEnd){
+ 285              		.loc 1 92 0 discriminator 1
+ 286 004e FA88     		ldrh	r2, [r7, #6]
+ 287 0050 B7F90430 		ldrsh	r3, [r7, #4]
+ 288 0054 9A42     		cmp	r2, r3
+ 289 0056 0CBF     		ite	eq
+ 290 0058 0023     		moveq	r3, #0
+ 291 005a 0123     		movne	r3, #1
+ 292 005c DBB2     		uxtb	r3, r3
+ 293 005e 002B     		cmp	r3, #0
+ 294 0060 E3D1     		bne	.L6
+  98:../src/ctrl.cpp **** 	}
+  99:../src/ctrl.cpp **** 	return -1;
+ 295              		.loc 1 99 0
+ 296 0062 4FF6FF73 		movw	r3, #65535
+ 297              	.L5:
+ 298 0066 1BB2     		sxth	r3, r3
+ 299              	.LBE3:
+ 100:../src/ctrl.cpp **** }
+ 300              		.loc 1 100 0
+ 301 0068 1846     		mov	r0, r3
+ 302 006a 07F10807 		add	r7, r7, #8
+ 303 006e BD46     		mov	sp, r7
+ 304 0070 80BD     		pop	{r7, pc}
+ 305              		.cfi_endproc
+ 306              	.LFE32:
+ 308 0072 00BF     		.section	.text._Z16ctrlCheckAndExecv,"ax",%progbits
+ 309              		.align	2
+ 310              		.global	_Z16ctrlCheckAndExecv
+ 311              		.thumb
+ 312              		.thumb_func
+ 314              	_Z16ctrlCheckAndExecv:
+ 315              	.LFB33:
+ 101:../src/ctrl.cpp **** 
+ 102:../src/ctrl.cpp **** bool ctrlCheckAndExec(){
+ 316              		.loc 1 102 0
+ 317              		.cfi_startproc
+ 318              		@ args = 0, pretend = 0, frame = 64
+ 319              		@ frame_needed = 1, uses_anonymous_args = 0
+ 320 0000 80B5     		push	{r7, lr}
+ 321              	.LCFI6:
+ 322              		.cfi_def_cfa_offset 8
+ 323              		.cfi_offset 14, -4
+ 324              		.cfi_offset 7, -8
+ 325 0002 90B0     		sub	sp, sp, #64
+ 326              	.LCFI7:
+ 327              		.cfi_def_cfa_offset 72
+ 328 0004 00AF     		add	r7, sp, #0
+ 329              	.LCFI8:
+ 330              		.cfi_def_cfa_register 7
+ 331              	.LBB4:
+ 103:../src/ctrl.cpp **** 	int16_t curPos = ctrlCheck();
+ 332              		.loc 1 103 0
+ 333 0006 FFF7FEFF 		bl	_Z9ctrlCheckv
+ 334 000a 0346     		mov	r3, r0
+ 335 000c FB86     		strh	r3, [r7, #54]	@ movhi
+ 104:../src/ctrl.cpp **** 	if(curPos < 0){
+ 336              		.loc 1 104 0
+ 337 000e B7F93630 		ldrsh	r3, [r7, #54]
+ 338 0012 002B     		cmp	r3, #0
+ 339 0014 02DA     		bge	.L8
+ 105:../src/ctrl.cpp **** 		return false;
+ 340              		.loc 1 105 0
+ 341 0016 4FF00003 		mov	r3, #0
+ 342 001a BEE1     		b	.L9
+ 343              	.L8:
+ 106:../src/ctrl.cpp **** 	}
+ 107:../src/ctrl.cpp **** 	char tmpBuf[SIZE/4];
+ 108:../src/ctrl.cpp **** 	int len = 0;
+ 344              		.loc 1 108 0
+ 345 001c 4FF00003 		mov	r3, #0
+ 346 0020 FB63     		str	r3, [r7, #60]
+ 347              	.LBB5:
+ 109:../src/ctrl.cpp **** 	for(int i = 0; (i + ctrlPos) % SIZE != curPos; i++){
+ 348              		.loc 1 109 0
+ 349 0022 4FF00003 		mov	r3, #0
+ 350 0026 BB63     		str	r3, [r7, #56]
+ 351 0028 24E0     		b	.L10
+ 352              	.L13:
+ 110:../src/ctrl.cpp **** 		tmpBuf[i] = ctrlBuffer[(ctrlPos + i) % SIZE];
+ 353              		.loc 1 110 0 discriminator 2
+ 354 002a 40F20003 		movw	r3, #:lower16:ctrlPos
+ 355 002e C0F20003 		movt	r3, #:upper16:ctrlPos
+ 356 0032 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 357 0034 1A46     		mov	r2, r3
+ 358 0036 BB6B     		ldr	r3, [r7, #56]
+ 359 0038 D218     		adds	r2, r2, r3
+ 360 003a 4FF07F03 		mov	r3, #127
+ 361 003e C8F20003 		movt	r3, 32768
+ 362 0042 1340     		ands	r3, r3, r2
+ 363 0044 002B     		cmp	r3, #0
+ 364 0046 05DA     		bge	.L11
+ 365 0048 03F1FF33 		add	r3, r3, #-1
+ 366 004c 63F07F03 		orn	r3, r3, #127
+ 367 0050 03F10103 		add	r3, r3, #1
+ 368              	.L11:
+ 369 0054 1A46     		mov	r2, r3
+ 370 0056 40F20003 		movw	r3, #:lower16:ctrlBuffer
+ 371 005a C0F20003 		movt	r3, #:upper16:ctrlBuffer
+ 372 005e 9A5C     		ldrb	r2, [r3, r2]	@ zero_extendqisi2
+ 373 0060 3946     		mov	r1, r7
+ 374 0062 BB6B     		ldr	r3, [r7, #56]
+ 375 0064 CB18     		adds	r3, r1, r3
+ 376 0066 1A70     		strb	r2, [r3, #0]
+ 111:../src/ctrl.cpp **** 		len = i;
+ 377              		.loc 1 111 0 discriminator 2
+ 378 0068 BB6B     		ldr	r3, [r7, #56]
+ 379 006a FB63     		str	r3, [r7, #60]
+ 109:../src/ctrl.cpp **** 	for(int i = 0; (i + ctrlPos) % SIZE != curPos; i++){
+ 380              		.loc 1 109 0 discriminator 2
+ 381 006c BB6B     		ldr	r3, [r7, #56]
+ 382 006e 03F10103 		add	r3, r3, #1
+ 383 0072 BB63     		str	r3, [r7, #56]
+ 384              	.L10:
+ 109:../src/ctrl.cpp **** 	for(int i = 0; (i + ctrlPos) % SIZE != curPos; i++){
+ 385              		.loc 1 109 0 is_stmt 0 discriminator 1
+ 386 0074 40F20003 		movw	r3, #:lower16:ctrlPos
+ 387 0078 C0F20003 		movt	r3, #:upper16:ctrlPos
+ 388 007c 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 389 007e 1A46     		mov	r2, r3
+ 390 0080 BB6B     		ldr	r3, [r7, #56]
+ 391 0082 D218     		adds	r2, r2, r3
+ 392 0084 4FF07F03 		mov	r3, #127
+ 393 0088 C8F20003 		movt	r3, 32768
+ 394 008c 1340     		ands	r3, r3, r2
+ 395 008e 002B     		cmp	r3, #0
+ 396 0090 05DA     		bge	.L12
+ 397 0092 03F1FF33 		add	r3, r3, #-1
+ 398 0096 63F07F03 		orn	r3, r3, #127
+ 399 009a 03F10103 		add	r3, r3, #1
+ 400              	.L12:
+ 401 009e 1A46     		mov	r2, r3
+ 402 00a0 B7F93630 		ldrsh	r3, [r7, #54]
+ 403 00a4 9A42     		cmp	r2, r3
+ 404 00a6 0CBF     		ite	eq
+ 405 00a8 0023     		moveq	r3, #0
+ 406 00aa 0123     		movne	r3, #1
+ 407 00ac DBB2     		uxtb	r3, r3
+ 408 00ae 002B     		cmp	r3, #0
+ 409 00b0 BBD1     		bne	.L13
+ 410              	.LBE5:
+ 112:../src/ctrl.cpp **** 	}
+ 113:../src/ctrl.cpp **** 	tmpBuf[len + 1] = 0;
+ 411              		.loc 1 113 0 is_stmt 1
+ 412 00b2 FB6B     		ldr	r3, [r7, #60]
+ 413 00b4 03F10103 		add	r3, r3, #1
+ 414 00b8 07F14002 		add	r2, r7, #64
+ 415 00bc D318     		adds	r3, r2, r3
+ 416 00be 4FF00002 		mov	r2, #0
+ 417 00c2 03F8402C 		strb	r2, [r3, #-64]
+ 114:../src/ctrl.cpp **** 	ctrlPos = (curPos + 1) % SIZE;
+ 418              		.loc 1 114 0
+ 419 00c6 B7F93630 		ldrsh	r3, [r7, #54]
+ 420 00ca 03F10102 		add	r2, r3, #1
+ 421 00ce 4FF07F03 		mov	r3, #127
+ 422 00d2 C8F20003 		movt	r3, 32768
+ 423 00d6 1340     		ands	r3, r3, r2
+ 424 00d8 002B     		cmp	r3, #0
+ 425 00da 05DA     		bge	.L14
+ 426 00dc 03F1FF33 		add	r3, r3, #-1
+ 427 00e0 63F07F03 		orn	r3, r3, #127
+ 428 00e4 03F10103 		add	r3, r3, #1
+ 429              	.L14:
+ 430 00e8 DAB2     		uxtb	r2, r3
+ 431 00ea 40F20003 		movw	r3, #:lower16:ctrlPos
+ 432 00ee C0F20003 		movt	r3, #:upper16:ctrlPos
+ 433 00f2 1A70     		strb	r2, [r3, #0]
+ 115:../src/ctrl.cpp **** 	uint16_t pos = 0;
+ 434              		.loc 1 115 0
+ 435 00f4 4FF00003 		mov	r3, #0
+ 436 00f8 BB86     		strh	r3, [r7, #52]	@ movhi
+ 437              	.LBB6:
+ 116:../src/ctrl.cpp **** 	if(tmpBuf[pos] == 'M'){
+ 438              		.loc 1 116 0
+ 439 00fa BB8E     		ldrh	r3, [r7, #52]
+ 440 00fc 07F14002 		add	r2, r7, #64
+ 441 0100 D318     		adds	r3, r2, r3
+ 442 0102 13F8403C 		ldrb	r3, [r3, #-64]	@ zero_extendqisi2
+ 443 0106 4D2B     		cmp	r3, #77
+ 444 0108 40F0B080 		bne	.L15
+ 445              	.LBB7:
+ 117:../src/ctrl.cpp **** 		pos++;
+ 446              		.loc 1 117 0
+ 447 010c BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 448 010e 03F10103 		add	r3, r3, #1
+ 449 0112 BB86     		strh	r3, [r7, #52]	@ movhi
+ 450              	.LBB8:
+ 118:../src/ctrl.cpp **** 		if(strcmpLen(mV, tmpBuf + pos, sizeof(mV) - 1) == 0){
+ 451              		.loc 1 118 0
+ 452 0114 BB8E     		ldrh	r3, [r7, #52]
+ 453 0116 3A46     		mov	r2, r7
+ 454 0118 D318     		adds	r3, r2, r3
+ 455 011a 40F20000 		movw	r0, #:lower16:_ZL2mV
+ 456 011e C0F20000 		movt	r0, #:upper16:_ZL2mV
+ 457 0122 1946     		mov	r1, r3
+ 458 0124 4FF00302 		mov	r2, #3
+ 459 0128 FFF7FEFF 		bl	_Z9strcmpLenPKcS0_t
+ 460 012c 0346     		mov	r3, r0
+ 461 012e 002B     		cmp	r3, #0
+ 462 0130 14BF     		ite	ne
+ 463 0132 0023     		movne	r3, #0
+ 464 0134 0123     		moveq	r3, #1
+ 465 0136 DBB2     		uxtb	r3, r3
+ 466 0138 002B     		cmp	r3, #0
+ 467 013a 16D0     		beq	.L16
+ 468              	.LBB9:
+ 119:../src/ctrl.cpp **** 			pos += sizeof(mV) - 1;
+ 469              		.loc 1 119 0
+ 470 013c BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 471 013e 03F10303 		add	r3, r3, #3
+ 472 0142 BB86     		strh	r3, [r7, #52]	@ movhi
+ 120:../src/ctrl.cpp **** 			float rpm;
+ 121:../src/ctrl.cpp **** 			pos += atof(&rpm, tmpBuf + pos);
+ 473              		.loc 1 121 0
+ 474 0144 BB8E     		ldrh	r3, [r7, #52]
+ 475 0146 3A46     		mov	r2, r7
+ 476 0148 D318     		adds	r3, r2, r3
+ 477 014a 07F13002 		add	r2, r7, #48
+ 478 014e 1046     		mov	r0, r2
+ 479 0150 1946     		mov	r1, r3
+ 480 0152 FFF7FEFF 		bl	_Z4atofPfPc
+ 481 0156 0346     		mov	r3, r0
+ 482 0158 1A46     		mov	r2, r3
+ 483 015a BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 484 015c D318     		adds	r3, r2, r3
+ 485 015e BB86     		strh	r3, [r7, #52]	@ movhi
+ 122:../src/ctrl.cpp **** 			motorSetVel(rpm);
+ 486              		.loc 1 122 0
+ 487 0160 3B6B     		ldr	r3, [r7, #48]	@ float
+ 488 0162 1846     		mov	r0, r3
+ 489 0164 FFF7FEFF 		bl	_Z11motorSetVelf
+ 490 0168 15E1     		b	.L17
+ 491              	.L16:
+ 492              	.LBE9:
+ 493              	.LBB10:
+ 494              	.LBB11:
+ 123:../src/ctrl.cpp **** 		}
+ 124:../src/ctrl.cpp **** 		else if(strcmpLen(mP, tmpBuf + pos, sizeof(mP) - 1) == 0){
+ 495              		.loc 1 124 0
+ 496 016a BB8E     		ldrh	r3, [r7, #52]
+ 497 016c 3A46     		mov	r2, r7
+ 498 016e D318     		adds	r3, r2, r3
+ 499 0170 40F20000 		movw	r0, #:lower16:_ZL2mP
+ 500 0174 C0F20000 		movt	r0, #:upper16:_ZL2mP
+ 501 0178 1946     		mov	r1, r3
+ 502 017a 4FF00302 		mov	r2, #3
+ 503 017e FFF7FEFF 		bl	_Z9strcmpLenPKcS0_t
+ 504 0182 0346     		mov	r3, r0
+ 505 0184 002B     		cmp	r3, #0
+ 506 0186 14BF     		ite	ne
+ 507 0188 0023     		movne	r3, #0
+ 508 018a 0123     		moveq	r3, #1
+ 509 018c DBB2     		uxtb	r3, r3
+ 510 018e 002B     		cmp	r3, #0
+ 511 0190 16D0     		beq	.L18
+ 512              	.LBB12:
+ 125:../src/ctrl.cpp **** 			pos += sizeof(mP) - 1;
+ 513              		.loc 1 125 0
+ 514 0192 BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 515 0194 03F10303 		add	r3, r3, #3
+ 516 0198 BB86     		strh	r3, [r7, #52]	@ movhi
+ 126:../src/ctrl.cpp **** 			float position;
+ 127:../src/ctrl.cpp **** 			pos += atof(&position, tmpBuf + pos);
+ 517              		.loc 1 127 0
+ 518 019a BB8E     		ldrh	r3, [r7, #52]
+ 519 019c 3A46     		mov	r2, r7
+ 520 019e D318     		adds	r3, r2, r3
+ 521 01a0 07F12C02 		add	r2, r7, #44
+ 522 01a4 1046     		mov	r0, r2
+ 523 01a6 1946     		mov	r1, r3
+ 524 01a8 FFF7FEFF 		bl	_Z4atofPfPc
+ 525 01ac 0346     		mov	r3, r0
+ 526 01ae 1A46     		mov	r2, r3
+ 527 01b0 BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 528 01b2 D318     		adds	r3, r2, r3
+ 529 01b4 BB86     		strh	r3, [r7, #52]	@ movhi
+ 128:../src/ctrl.cpp **** 			motorSetPos(position);
+ 530              		.loc 1 128 0
+ 531 01b6 FB6A     		ldr	r3, [r7, #44]	@ float
+ 532 01b8 1846     		mov	r0, r3
+ 533 01ba FFF7FEFF 		bl	_Z11motorSetPosf
+ 534 01be EAE0     		b	.L17
+ 535              	.L18:
+ 536              	.LBE12:
+ 537              	.LBB13:
+ 538              	.LBB14:
+ 129:../src/ctrl.cpp **** 		}
+ 130:../src/ctrl.cpp **** 		else if(strcmpLen(mR, tmpBuf + pos, sizeof(mR) - 1) == 0){
+ 539              		.loc 1 130 0
+ 540 01c0 BB8E     		ldrh	r3, [r7, #52]
+ 541 01c2 3A46     		mov	r2, r7
+ 542 01c4 D318     		adds	r3, r2, r3
+ 543 01c6 40F20000 		movw	r0, #:lower16:_ZL2mR
+ 544 01ca C0F20000 		movt	r0, #:upper16:_ZL2mR
+ 545 01ce 1946     		mov	r1, r3
+ 546 01d0 4FF00302 		mov	r2, #3
+ 547 01d4 FFF7FEFF 		bl	_Z9strcmpLenPKcS0_t
+ 548 01d8 0346     		mov	r3, r0
+ 549 01da 002B     		cmp	r3, #0
+ 550 01dc 14BF     		ite	ne
+ 551 01de 0023     		movne	r3, #0
+ 552 01e0 0123     		moveq	r3, #1
+ 553 01e2 DBB2     		uxtb	r3, r3
+ 554 01e4 002B     		cmp	r3, #0
+ 555 01e6 3ED0     		beq	.L19
+ 556              	.LBB15:
+ 131:../src/ctrl.cpp **** 			pos += sizeof(mR) - 1;
+ 557              		.loc 1 131 0
+ 558 01e8 BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 559 01ea 03F10303 		add	r3, r3, #3
+ 560 01ee BB86     		strh	r3, [r7, #52]	@ movhi
+ 132:../src/ctrl.cpp **** 			float kp, ki, kd;
+ 133:../src/ctrl.cpp **** 			pos += atof(&kp, tmpBuf + pos);
+ 561              		.loc 1 133 0
+ 562 01f0 BB8E     		ldrh	r3, [r7, #52]
+ 563 01f2 3A46     		mov	r2, r7
+ 564 01f4 D318     		adds	r3, r2, r3
+ 565 01f6 07F12802 		add	r2, r7, #40
+ 566 01fa 1046     		mov	r0, r2
+ 567 01fc 1946     		mov	r1, r3
+ 568 01fe FFF7FEFF 		bl	_Z4atofPfPc
+ 569 0202 0346     		mov	r3, r0
+ 570 0204 1A46     		mov	r2, r3
+ 571 0206 BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 572 0208 D318     		adds	r3, r2, r3
+ 573 020a BB86     		strh	r3, [r7, #52]	@ movhi
+ 134:../src/ctrl.cpp **** 			pos++;
+ 574              		.loc 1 134 0
+ 575 020c BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 576 020e 03F10103 		add	r3, r3, #1
+ 577 0212 BB86     		strh	r3, [r7, #52]	@ movhi
+ 135:../src/ctrl.cpp **** 			pos += atof(&ki, tmpBuf + pos);
+ 578              		.loc 1 135 0
+ 579 0214 BB8E     		ldrh	r3, [r7, #52]
+ 580 0216 3A46     		mov	r2, r7
+ 581 0218 D318     		adds	r3, r2, r3
+ 582 021a 07F12402 		add	r2, r7, #36
+ 583 021e 1046     		mov	r0, r2
+ 584 0220 1946     		mov	r1, r3
+ 585 0222 FFF7FEFF 		bl	_Z4atofPfPc
+ 586 0226 0346     		mov	r3, r0
+ 587 0228 1A46     		mov	r2, r3
+ 588 022a BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 589 022c D318     		adds	r3, r2, r3
+ 590 022e BB86     		strh	r3, [r7, #52]	@ movhi
+ 136:../src/ctrl.cpp **** 			pos++;
+ 591              		.loc 1 136 0
+ 592 0230 BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 593 0232 03F10103 		add	r3, r3, #1
+ 594 0236 BB86     		strh	r3, [r7, #52]	@ movhi
+ 137:../src/ctrl.cpp **** 			pos += atof(&kd, tmpBuf + pos);
+ 595              		.loc 1 137 0
+ 596 0238 BB8E     		ldrh	r3, [r7, #52]
+ 597 023a 3A46     		mov	r2, r7
+ 598 023c D318     		adds	r3, r2, r3
+ 599 023e 07F12002 		add	r2, r7, #32
+ 600 0242 1046     		mov	r0, r2
+ 601 0244 1946     		mov	r1, r3
+ 602 0246 FFF7FEFF 		bl	_Z4atofPfPc
+ 603 024a 0346     		mov	r3, r0
+ 604 024c 1A46     		mov	r2, r3
+ 605 024e BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 606 0250 D318     		adds	r3, r2, r3
+ 607 0252 BB86     		strh	r3, [r7, #52]	@ movhi
+ 138:../src/ctrl.cpp **** 			motorSetPid(kp, ki, kd);
+ 608              		.loc 1 138 0
+ 609 0254 B96A     		ldr	r1, [r7, #40]	@ float
+ 610 0256 7A6A     		ldr	r2, [r7, #36]	@ float
+ 611 0258 3B6A     		ldr	r3, [r7, #32]	@ float
+ 612 025a 0846     		mov	r0, r1
+ 613 025c 1146     		mov	r1, r2
+ 614 025e 1A46     		mov	r2, r3
+ 615 0260 FFF7FEFF 		bl	_Z11motorSetPidfff
+ 616 0264 97E0     		b	.L17
+ 617              	.L19:
+ 618              	.LBE15:
+ 139:../src/ctrl.cpp **** 		}
+ 140:../src/ctrl.cpp **** 		else{
+ 141:../src/ctrl.cpp **** 			return false;
+ 619              		.loc 1 141 0
+ 620 0266 4FF00003 		mov	r3, #0
+ 621 026a 96E0     		b	.L9
+ 622              	.L15:
+ 623              	.LBE14:
+ 624              	.LBE13:
+ 625              	.LBE11:
+ 626              	.LBE10:
+ 627              	.LBE8:
+ 628              	.LBE7:
+ 142:../src/ctrl.cpp **** 		}
+ 143:../src/ctrl.cpp **** 	}
+ 144:../src/ctrl.cpp **** 	else if(tmpBuf[pos] == 'C'){
+ 629              		.loc 1 144 0
+ 630 026c BB8E     		ldrh	r3, [r7, #52]
+ 631 026e 07F14002 		add	r2, r7, #64
+ 632 0272 D318     		adds	r3, r2, r3
+ 633 0274 13F8403C 		ldrb	r3, [r3, #-64]	@ zero_extendqisi2
+ 634 0278 432B     		cmp	r3, #67
+ 635 027a 72D1     		bne	.L20
+ 145:../src/ctrl.cpp **** 		pos++;
+ 636              		.loc 1 145 0
+ 637 027c BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 638 027e 03F10103 		add	r3, r3, #1
+ 639 0282 BB86     		strh	r3, [r7, #52]	@ movhi
+ 146:../src/ctrl.cpp **** 		if(strcmpLen(cStartV, tmpBuf + pos, sizeof(cStartV) - 1) == 0){
+ 640              		.loc 1 146 0
+ 641 0284 BB8E     		ldrh	r3, [r7, #52]
+ 642 0286 3A46     		mov	r2, r7
+ 643 0288 D318     		adds	r3, r2, r3
+ 644 028a 40F20000 		movw	r0, #:lower16:_ZL7cStartV
+ 645 028e C0F20000 		movt	r0, #:upper16:_ZL7cStartV
+ 646 0292 1946     		mov	r1, r3
+ 647 0294 4FF00A02 		mov	r2, #10
+ 648 0298 FFF7FEFF 		bl	_Z9strcmpLenPKcS0_t
+ 649 029c 0346     		mov	r3, r0
+ 650 029e 002B     		cmp	r3, #0
+ 651 02a0 14BF     		ite	ne
+ 652 02a2 0023     		movne	r3, #0
+ 653 02a4 0123     		moveq	r3, #1
+ 654 02a6 DBB2     		uxtb	r3, r3
+ 655 02a8 002B     		cmp	r3, #0
+ 656 02aa 06D0     		beq	.L21
+ 147:../src/ctrl.cpp **** 			pos += sizeof(cStartV) - 1;
+ 657              		.loc 1 147 0
+ 658 02ac BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 659 02ae 03F10A03 		add	r3, r3, #10
+ 660 02b2 BB86     		strh	r3, [r7, #52]	@ movhi
+ 148:../src/ctrl.cpp **** 			motorRunVel();
+ 661              		.loc 1 148 0
+ 662 02b4 FFF7FEFF 		bl	_Z11motorRunVelv
+ 663 02b8 6DE0     		b	.L17
+ 664              	.L21:
+ 149:../src/ctrl.cpp **** 		}
+ 150:../src/ctrl.cpp **** 		else if(strcmpLen(cStartP, tmpBuf + pos, sizeof(cStartP) - 1) == 0){
+ 665              		.loc 1 150 0
+ 666 02ba BB8E     		ldrh	r3, [r7, #52]
+ 667 02bc 3A46     		mov	r2, r7
+ 668 02be D318     		adds	r3, r2, r3
+ 669 02c0 40F20000 		movw	r0, #:lower16:_ZL7cStartP
+ 670 02c4 C0F20000 		movt	r0, #:upper16:_ZL7cStartP
+ 671 02c8 1946     		mov	r1, r3
+ 672 02ca 4FF00A02 		mov	r2, #10
+ 673 02ce FFF7FEFF 		bl	_Z9strcmpLenPKcS0_t
+ 674 02d2 0346     		mov	r3, r0
+ 675 02d4 002B     		cmp	r3, #0
+ 676 02d6 14BF     		ite	ne
+ 677 02d8 0023     		movne	r3, #0
+ 678 02da 0123     		moveq	r3, #1
+ 679 02dc DBB2     		uxtb	r3, r3
+ 680 02de 002B     		cmp	r3, #0
+ 681 02e0 06D0     		beq	.L22
+ 151:../src/ctrl.cpp **** 			pos += sizeof(cStartP) - 1;
+ 682              		.loc 1 151 0
+ 683 02e2 BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 684 02e4 03F10A03 		add	r3, r3, #10
+ 685 02e8 BB86     		strh	r3, [r7, #52]	@ movhi
+ 152:../src/ctrl.cpp **** 			motorRunPos();
+ 686              		.loc 1 152 0
+ 687 02ea FFF7FEFF 		bl	_Z11motorRunPosv
+ 688 02ee 52E0     		b	.L17
+ 689              	.L22:
+ 153:../src/ctrl.cpp **** 		}
+ 154:../src/ctrl.cpp **** 		else if(strcmpLen(cStop, tmpBuf + pos, sizeof(cStop) - 1) == 0){
+ 690              		.loc 1 154 0
+ 691 02f0 BB8E     		ldrh	r3, [r7, #52]
+ 692 02f2 3A46     		mov	r2, r7
+ 693 02f4 D318     		adds	r3, r2, r3
+ 694 02f6 40F20000 		movw	r0, #:lower16:_ZL5cStop
+ 695 02fa C0F20000 		movt	r0, #:upper16:_ZL5cStop
+ 696 02fe 1946     		mov	r1, r3
+ 697 0300 4FF00502 		mov	r2, #5
+ 698 0304 FFF7FEFF 		bl	_Z9strcmpLenPKcS0_t
+ 699 0308 0346     		mov	r3, r0
+ 700 030a 002B     		cmp	r3, #0
+ 701 030c 14BF     		ite	ne
+ 702 030e 0023     		movne	r3, #0
+ 703 0310 0123     		moveq	r3, #1
+ 704 0312 DBB2     		uxtb	r3, r3
+ 705 0314 002B     		cmp	r3, #0
+ 706 0316 06D0     		beq	.L23
+ 155:../src/ctrl.cpp **** 			pos += sizeof(cStop) - 1;
+ 707              		.loc 1 155 0
+ 708 0318 BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 709 031a 03F10503 		add	r3, r3, #5
+ 710 031e BB86     		strh	r3, [r7, #52]	@ movhi
+ 156:../src/ctrl.cpp **** 			motorStop();
+ 711              		.loc 1 156 0
+ 712 0320 FFF7FEFF 		bl	_Z9motorStopv
+ 713 0324 37E0     		b	.L17
+ 714              	.L23:
+ 157:../src/ctrl.cpp **** 		}
+ 158:../src/ctrl.cpp **** 		else if(strcmpLen(cShutdown, tmpBuf + pos, sizeof(cShutdown) - 1) == 0){
+ 715              		.loc 1 158 0
+ 716 0326 BB8E     		ldrh	r3, [r7, #52]
+ 717 0328 3A46     		mov	r2, r7
+ 718 032a D318     		adds	r3, r2, r3
+ 719 032c 40F20000 		movw	r0, #:lower16:_ZL9cShutdown
+ 720 0330 C0F20000 		movt	r0, #:upper16:_ZL9cShutdown
+ 721 0334 1946     		mov	r1, r3
+ 722 0336 4FF00902 		mov	r2, #9
+ 723 033a FFF7FEFF 		bl	_Z9strcmpLenPKcS0_t
+ 724 033e 0346     		mov	r3, r0
+ 725 0340 002B     		cmp	r3, #0
+ 726 0342 14BF     		ite	ne
+ 727 0344 0023     		movne	r3, #0
+ 728 0346 0123     		moveq	r3, #1
+ 729 0348 DBB2     		uxtb	r3, r3
+ 730 034a 002B     		cmp	r3, #0
+ 731 034c 06D0     		beq	.L24
+ 159:../src/ctrl.cpp **** 			pos += sizeof(cShutdown) - 1;
+ 732              		.loc 1 159 0
+ 733 034e BB8E     		ldrh	r3, [r7, #52]	@ movhi
+ 734 0350 03F10903 		add	r3, r3, #9
+ 735 0354 BB86     		strh	r3, [r7, #52]	@ movhi
+ 160:../src/ctrl.cpp **** 			motorShutdown();
+ 736              		.loc 1 160 0
+ 737 0356 FFF7FEFF 		bl	_Z13motorShutdownv
+ 738 035a 1CE0     		b	.L17
+ 739              	.L24:
+ 161:../src/ctrl.cpp **** 		}
+ 162:../src/ctrl.cpp **** 		else{
+ 163:../src/ctrl.cpp **** 			return false;
+ 740              		.loc 1 163 0
+ 741 035c 4FF00003 		mov	r3, #0
+ 742 0360 1BE0     		b	.L9
+ 743              	.L20:
+ 164:../src/ctrl.cpp **** 		}
+ 165:../src/ctrl.cpp **** 
+ 166:../src/ctrl.cpp **** 	}
+ 167:../src/ctrl.cpp **** 	else{
+ 168:../src/ctrl.cpp **** 		ctrlPos = (curPos + 1) % SIZE;
+ 744              		.loc 1 168 0
+ 745 0362 B7F93630 		ldrsh	r3, [r7, #54]
+ 746 0366 03F10102 		add	r2, r3, #1
+ 747 036a 4FF07F03 		mov	r3, #127
+ 748 036e C8F20003 		movt	r3, 32768
+ 749 0372 1340     		ands	r3, r3, r2
+ 750 0374 002B     		cmp	r3, #0
+ 751 0376 05DA     		bge	.L25
+ 752 0378 03F1FF33 		add	r3, r3, #-1
+ 753 037c 63F07F03 		orn	r3, r3, #127
+ 754 0380 03F10103 		add	r3, r3, #1
+ 755              	.L25:
+ 756 0384 DAB2     		uxtb	r2, r3
+ 757 0386 40F20003 		movw	r3, #:lower16:ctrlPos
+ 758 038a C0F20003 		movt	r3, #:upper16:ctrlPos
+ 759 038e 1A70     		strb	r2, [r3, #0]
+ 169:../src/ctrl.cpp **** 		return false;
+ 760              		.loc 1 169 0
+ 761 0390 4FF00003 		mov	r3, #0
+ 762 0394 01E0     		b	.L9
+ 763              	.L17:
+ 764              	.LBE6:
+ 170:../src/ctrl.cpp **** 	}
+ 171:../src/ctrl.cpp **** 	return true;
+ 765              		.loc 1 171 0
+ 766 0396 4FF00103 		mov	r3, #1
+ 767              	.L9:
+ 768              	.LBE4:
+ 172:../src/ctrl.cpp **** }
+ 769              		.loc 1 172 0
+ 770 039a 1846     		mov	r0, r3
+ 771 039c 07F14007 		add	r7, r7, #64
+ 772 03a0 BD46     		mov	sp, r7
+ 773 03a2 80BD     		pop	{r7, pc}
+ 774              		.cfi_endproc
+ 775              	.LFE33:
+ 777              		.global	__aeabi_i2f
+ 778              		.section	.text._Z12ctrlSendInfov,"ax",%progbits
+ 779              		.align	2
+ 780              		.global	_Z12ctrlSendInfov
+ 781              		.thumb
+ 782              		.thumb_func
+ 784              	_Z12ctrlSendInfov:
+ 785              	.LFB34:
+ 173:../src/ctrl.cpp **** 
+ 174:../src/ctrl.cpp **** void ctrlSendInfo(){
+ 786              		.loc 1 174 0
+ 787              		.cfi_startproc
+ 788              		@ args = 0, pretend = 0, frame = 144
+ 789              		@ frame_needed = 1, uses_anonymous_args = 0
+ 790 0000 80B5     		push	{r7, lr}
+ 791              	.LCFI9:
+ 792              		.cfi_def_cfa_offset 8
+ 793              		.cfi_offset 14, -4
+ 794              		.cfi_offset 7, -8
+ 795 0002 A4B0     		sub	sp, sp, #144
+ 796              	.LCFI10:
+ 797              		.cfi_def_cfa_offset 152
+ 798 0004 00AF     		add	r7, sp, #0
+ 799              	.LCFI11:
+ 800              		.cfi_def_cfa_register 7
+ 801              	.LBB16:
+ 175:../src/ctrl.cpp **** 	char buffer[SIZE];
+ 176:../src/ctrl.cpp **** 	uint16_t cnt = 0;
+ 802              		.loc 1 176 0
+ 803 0006 4FF00003 		mov	r3, #0
+ 804 000a A7F88E30 		strh	r3, [r7, #142]	@ movhi
+ 177:../src/ctrl.cpp **** 
+ 178:../src/ctrl.cpp **** 	float speed = cur_speed*PID_freq*60/cpr;
+ 805              		.loc 1 178 0
+ 806 000e 40F20003 		movw	r3, #:lower16:cur_speed
+ 807 0012 C0F20003 		movt	r3, #:upper16:cur_speed
+ 808 0016 1B68     		ldr	r3, [r3, #0]
+ 809 0018 40F6B832 		movw	r2, #3000
+ 810 001c 02FB03F2 		mul	r2, r2, r3
+ 811 0020 40F20003 		movw	r3, #:lower16:cpr
+ 812 0024 C0F20003 		movt	r3, #:upper16:cpr
+ 813 0028 1B88     		ldrh	r3, [r3, #0]
+ 814 002a 92FBF3F3 		sdiv	r3, r2, r3
+ 815 002e 1846     		mov	r0, r3
+ 816 0030 FFF7FEFF 		bl	__aeabi_i2f
+ 817 0034 0346     		mov	r3, r0
+ 818 0036 C7F88830 		str	r3, [r7, #136]	@ float
+ 179:../src/ctrl.cpp **** 	cnt += appendInfo(buffer + cnt, iRpm, sizeof(iRpm) - 1, speed);
+ 819              		.loc 1 179 0
+ 820 003a B7F88E30 		ldrh	r3, [r7, #142]
+ 821 003e 07F10402 		add	r2, r7, #4
+ 822 0042 D318     		adds	r3, r2, r3
+ 823 0044 1846     		mov	r0, r3
+ 824 0046 40F20001 		movw	r1, #:lower16:_ZL4iRpm
+ 825 004a C0F20001 		movt	r1, #:upper16:_ZL4iRpm
+ 826 004e 4FF00602 		mov	r2, #6
+ 827 0052 D7F88830 		ldr	r3, [r7, #136]	@ float
+ 828 0056 FFF7FEFF 		bl	_Z10appendInfoPcPKctf
+ 829 005a 0346     		mov	r3, r0
+ 830 005c 1A46     		mov	r2, r3
+ 831 005e B7F88E30 		ldrh	r3, [r7, #142]	@ movhi
+ 832 0062 D318     		adds	r3, r2, r3
+ 833 0064 A7F88E30 		strh	r3, [r7, #142]	@ movhi
+ 180:../src/ctrl.cpp **** 
+ 181:../src/ctrl.cpp **** 	float cte = cte_prev*PID_freq*60/cpr;;
+ 834              		.loc 1 181 0
+ 835 0068 40F20003 		movw	r3, #:lower16:cte_prev
+ 836 006c C0F20003 		movt	r3, #:upper16:cte_prev
+ 837 0070 1B68     		ldr	r3, [r3, #0]
+ 838 0072 40F6B832 		movw	r2, #3000
+ 839 0076 02FB03F2 		mul	r2, r2, r3
+ 840 007a 40F20003 		movw	r3, #:lower16:cpr
+ 841 007e C0F20003 		movt	r3, #:upper16:cpr
+ 842 0082 1B88     		ldrh	r3, [r3, #0]
+ 843 0084 92FBF3F3 		sdiv	r3, r2, r3
+ 844 0088 1846     		mov	r0, r3
+ 845 008a FFF7FEFF 		bl	__aeabi_i2f
+ 846 008e 0346     		mov	r3, r0
+ 847 0090 C7F88430 		str	r3, [r7, #132]	@ float
+ 182:../src/ctrl.cpp **** 	cnt += appendInfo(buffer + cnt, iCte, sizeof(iCte) - 1, cte);
+ 848              		.loc 1 182 0
+ 849 0094 B7F88E30 		ldrh	r3, [r7, #142]
+ 850 0098 07F10402 		add	r2, r7, #4
+ 851 009c D318     		adds	r3, r2, r3
+ 852 009e 1846     		mov	r0, r3
+ 853 00a0 40F20001 		movw	r1, #:lower16:_ZL4iCte
+ 854 00a4 C0F20001 		movt	r1, #:upper16:_ZL4iCte
+ 855 00a8 4FF00602 		mov	r2, #6
+ 856 00ac D7F88430 		ldr	r3, [r7, #132]	@ float
+ 857 00b0 FFF7FEFF 		bl	_Z10appendInfoPcPKctf
+ 858 00b4 0346     		mov	r3, r0
+ 859 00b6 1A46     		mov	r2, r3
+ 860 00b8 B7F88E30 		ldrh	r3, [r7, #142]	@ movhi
+ 861 00bc D318     		adds	r3, r2, r3
+ 862 00be A7F88E30 		strh	r3, [r7, #142]	@ movhi
+ 183:../src/ctrl.cpp **** 
+ 184:../src/ctrl.cpp **** 	cnt += appendInfo(buffer + cnt, iCur, sizeof(iCur) - 1, curMean);
+ 863              		.loc 1 184 0
+ 864 00c2 B7F88E30 		ldrh	r3, [r7, #142]
+ 865 00c6 07F10402 		add	r2, r7, #4
+ 866 00ca D218     		adds	r2, r2, r3
+ 867 00cc 40F20003 		movw	r3, #:lower16:curMean
+ 868 00d0 C0F20003 		movt	r3, #:upper16:curMean
+ 869 00d4 1B68     		ldr	r3, [r3, #0]	@ float
+ 870 00d6 1046     		mov	r0, r2
+ 871 00d8 40F20001 		movw	r1, #:lower16:_ZL4iCur
+ 872 00dc C0F20001 		movt	r1, #:upper16:_ZL4iCur
+ 873 00e0 4FF00602 		mov	r2, #6
+ 874 00e4 FFF7FEFF 		bl	_Z10appendInfoPcPKctf
+ 875 00e8 0346     		mov	r3, r0
+ 876 00ea 1A46     		mov	r2, r3
+ 877 00ec B7F88E30 		ldrh	r3, [r7, #142]	@ movhi
+ 878 00f0 D318     		adds	r3, r2, r3
+ 879 00f2 A7F88E30 		strh	r3, [r7, #142]	@ movhi
+ 185:../src/ctrl.cpp **** 
+ 186:../src/ctrl.cpp **** 	cnt += appendInfo(buffer + cnt, iMotV, sizeof(iMotV) - 1, motVMean);
+ 880              		.loc 1 186 0
+ 881 00f6 B7F88E30 		ldrh	r3, [r7, #142]
+ 882 00fa 07F10402 		add	r2, r7, #4
+ 883 00fe D218     		adds	r2, r2, r3
+ 884 0100 40F20003 		movw	r3, #:lower16:motVMean
+ 885 0104 C0F20003 		movt	r3, #:upper16:motVMean
+ 886 0108 1B68     		ldr	r3, [r3, #0]	@ float
+ 887 010a 1046     		mov	r0, r2
+ 888 010c 40F20001 		movw	r1, #:lower16:_ZL5iMotV
+ 889 0110 C0F20001 		movt	r1, #:upper16:_ZL5iMotV
+ 890 0114 4FF00702 		mov	r2, #7
+ 891 0118 FFF7FEFF 		bl	_Z10appendInfoPcPKctf
+ 892 011c 0346     		mov	r3, r0
+ 893 011e 1A46     		mov	r2, r3
+ 894 0120 B7F88E30 		ldrh	r3, [r7, #142]	@ movhi
+ 895 0124 D318     		adds	r3, r2, r3
+ 896 0126 A7F88E30 		strh	r3, [r7, #142]	@ movhi
+ 187:../src/ctrl.cpp **** 
+ 188:../src/ctrl.cpp **** 	buffer[cnt] = 0;
+ 897              		.loc 1 188 0
+ 898 012a B7F88E30 		ldrh	r3, [r7, #142]
+ 899 012e 07F19002 		add	r2, r7, #144
+ 900 0132 D318     		adds	r3, r2, r3
+ 901 0134 4FF00002 		mov	r2, #0
+ 902 0138 03F88C2C 		strb	r2, [r3, #-140]
+ 189:../src/ctrl.cpp **** 
+ 190:../src/ctrl.cpp **** 	ctrlSend(buffer, cnt);
+ 903              		.loc 1 190 0
+ 904 013c 07F10402 		add	r2, r7, #4
+ 905 0140 B7F88E30 		ldrh	r3, [r7, #142]
+ 906 0144 1046     		mov	r0, r2
+ 907 0146 1946     		mov	r1, r3
+ 908 0148 FFF7FEFF 		bl	_Z8ctrlSendPct
+ 909              	.LBE16:
+ 191:../src/ctrl.cpp **** }
+ 910              		.loc 1 191 0
+ 911 014c 07F19007 		add	r7, r7, #144
+ 912 0150 BD46     		mov	sp, r7
+ 913 0152 80BD     		pop	{r7, pc}
+ 914              		.cfi_endproc
+ 915              	.LFE34:
+ 917              		.section	.text._Z10appendInfoPcPKctf,"ax",%progbits
+ 918              		.align	2
+ 919              		.global	_Z10appendInfoPcPKctf
+ 920              		.thumb
+ 921              		.thumb_func
+ 923              	_Z10appendInfoPcPKctf:
+ 924              	.LFB35:
+ 192:../src/ctrl.cpp **** 
+ 193:../src/ctrl.cpp **** 
+ 194:../src/ctrl.cpp **** uint16_t appendInfo(char* buffer, const char* data, uint16_t len, float num){
+ 925              		.loc 1 194 0
+ 926              		.cfi_startproc
+ 927              		@ args = 0, pretend = 0, frame = 24
+ 928              		@ frame_needed = 1, uses_anonymous_args = 0
+ 929 0000 80B5     		push	{r7, lr}
+ 930              	.LCFI12:
+ 931              		.cfi_def_cfa_offset 8
+ 932              		.cfi_offset 14, -4
+ 933              		.cfi_offset 7, -8
+ 934 0002 86B0     		sub	sp, sp, #24
+ 935              	.LCFI13:
+ 936              		.cfi_def_cfa_offset 32
+ 937 0004 00AF     		add	r7, sp, #0
+ 938              	.LCFI14:
+ 939              		.cfi_def_cfa_register 7
+ 940 0006 F860     		str	r0, [r7, #12]
+ 941 0008 B960     		str	r1, [r7, #8]
+ 942 000a 3B60     		str	r3, [r7, #0]	@ float
+ 943 000c 1346     		mov	r3, r2	@ movhi
+ 944 000e FB80     		strh	r3, [r7, #6]	@ movhi
+ 945              	.LBB17:
+ 195:../src/ctrl.cpp **** 	uint16_t cnt = 0;
+ 946              		.loc 1 195 0
+ 947 0010 4FF00003 		mov	r3, #0
+ 948 0014 FB82     		strh	r3, [r7, #22]	@ movhi
+ 196:../src/ctrl.cpp **** 	strcpy(buffer + cnt, data);
+ 949              		.loc 1 196 0
+ 950 0016 FB8A     		ldrh	r3, [r7, #22]
+ 951 0018 FA68     		ldr	r2, [r7, #12]
+ 952 001a D318     		adds	r3, r2, r3
+ 953 001c 1846     		mov	r0, r3
+ 954 001e B968     		ldr	r1, [r7, #8]
+ 955 0020 FFF7FEFF 		bl	strcpy
+ 197:../src/ctrl.cpp **** 	cnt += len;
+ 956              		.loc 1 197 0
+ 957 0024 FA8A     		ldrh	r2, [r7, #22]	@ movhi
+ 958 0026 FB88     		ldrh	r3, [r7, #6]	@ movhi
+ 959 0028 D318     		adds	r3, r2, r3
+ 960 002a FB82     		strh	r3, [r7, #22]	@ movhi
+ 198:../src/ctrl.cpp **** 	cnt += ftoa(num, buffer + cnt, 5, 2);
+ 961              		.loc 1 198 0
+ 962 002c FB8A     		ldrh	r3, [r7, #22]
+ 963 002e FA68     		ldr	r2, [r7, #12]
+ 964 0030 D318     		adds	r3, r2, r3
+ 965 0032 3868     		ldr	r0, [r7, #0]	@ float
+ 966 0034 1946     		mov	r1, r3
+ 967 0036 4FF00502 		mov	r2, #5
+ 968 003a 4FF00203 		mov	r3, #2
+ 969 003e FFF7FEFF 		bl	_Z4ftoafPchh
+ 970 0042 0346     		mov	r3, r0
+ 971 0044 1A46     		mov	r2, r3
+ 972 0046 FB8A     		ldrh	r3, [r7, #22]	@ movhi
+ 973 0048 D318     		adds	r3, r2, r3
+ 974 004a FB82     		strh	r3, [r7, #22]	@ movhi
+ 199:../src/ctrl.cpp **** 	buffer[cnt++] = '\n';
+ 975              		.loc 1 199 0
+ 976 004c FB8A     		ldrh	r3, [r7, #22]
+ 977 004e FA68     		ldr	r2, [r7, #12]
+ 978 0050 D318     		adds	r3, r2, r3
+ 979 0052 4FF00A02 		mov	r2, #10
+ 980 0056 1A70     		strb	r2, [r3, #0]
+ 981 0058 FB8A     		ldrh	r3, [r7, #22]	@ movhi
+ 982 005a 03F10103 		add	r3, r3, #1
+ 983 005e FB82     		strh	r3, [r7, #22]	@ movhi
+ 200:../src/ctrl.cpp **** 	return cnt;
+ 984              		.loc 1 200 0
+ 985 0060 FB8A     		ldrh	r3, [r7, #22]
+ 986              	.LBE17:
+ 201:../src/ctrl.cpp **** }
+ 987              		.loc 1 201 0
+ 988 0062 1846     		mov	r0, r3
+ 989 0064 07F11807 		add	r7, r7, #24
+ 990 0068 BD46     		mov	sp, r7
+ 991 006a 80BD     		pop	{r7, pc}
+ 992              		.cfi_endproc
+ 993              	.LFE35:
+ 995              		.section	.text._Z8ctrlSendPct,"ax",%progbits
+ 996              		.align	2
+ 997              		.global	_Z8ctrlSendPct
+ 998              		.thumb
+ 999              		.thumb_func
+ 1001              	_Z8ctrlSendPct:
+ 1002              	.LFB36:
+ 202:../src/ctrl.cpp **** 
+ 203:../src/ctrl.cpp **** void ctrlSend(char* data, uint16_t len){
+ 1003              		.loc 1 203 0
+ 1004              		.cfi_startproc
+ 1005              		@ args = 0, pretend = 0, frame = 8
+ 1006              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1007 0000 80B5     		push	{r7, lr}
+ 1008              	.LCFI15:
+ 1009              		.cfi_def_cfa_offset 8
+ 1010              		.cfi_offset 14, -4
+ 1011              		.cfi_offset 7, -8
+ 1012 0002 82B0     		sub	sp, sp, #8
+ 1013              	.LCFI16:
+ 1014              		.cfi_def_cfa_offset 16
+ 1015 0004 00AF     		add	r7, sp, #0
+ 1016              	.LCFI17:
+ 1017              		.cfi_def_cfa_register 7
+ 1018 0006 7860     		str	r0, [r7, #4]
+ 1019 0008 0B46     		mov	r3, r1
+ 1020 000a 7B80     		strh	r3, [r7, #2]	@ movhi
+ 1021              	.L29:
+ 204:../src/ctrl.cpp **** 	while(DMA_Channel_TX->CNDTR > 0);
+ 1022              		.loc 1 204 0 discriminator 1
+ 1023 000c 4FF04403 		mov	r3, #68
+ 1024 0010 C4F20203 		movt	r3, 16386
+ 1025 0014 5B68     		ldr	r3, [r3, #4]
+ 1026 0016 002B     		cmp	r3, #0
+ 1027 0018 0CBF     		ite	eq
+ 1028 001a 0023     		moveq	r3, #0
+ 1029 001c 0123     		movne	r3, #1
+ 1030 001e DBB2     		uxtb	r3, r3
+ 1031 0020 002B     		cmp	r3, #0
+ 1032 0022 F3D1     		bne	.L29
+ 205:../src/ctrl.cpp **** 	DMA_Cmd(DMA_Channel_TX, DISABLE);
+ 1033              		.loc 1 205 0
+ 1034 0024 4FF04400 		mov	r0, #68
+ 1035 0028 C4F20200 		movt	r0, 16386
+ 1036 002c 4FF00001 		mov	r1, #0
+ 1037 0030 FFF7FEFF 		bl	DMA_Cmd
+ 206:../src/ctrl.cpp **** 	memcpy(dmaBuffer, data, len);
+ 1038              		.loc 1 206 0
+ 1039 0034 7888     		ldrh	r0, [r7, #2]
+ 1040 0036 40F20003 		movw	r3, #:lower16:dmaBuffer
+ 1041 003a C0F20003 		movt	r3, #:upper16:dmaBuffer
+ 1042 003e 7A68     		ldr	r2, [r7, #4]
+ 1043 0040 1946     		mov	r1, r3
+ 1044 0042 0346     		mov	r3, r0
+ 1045 0044 0846     		mov	r0, r1
+ 1046 0046 1146     		mov	r1, r2
+ 1047 0048 1A46     		mov	r2, r3
+ 1048 004a FFF7FEFF 		bl	memcpy
+ 207:../src/ctrl.cpp **** 	DMA_Channel_TX->CNDTR = len;
+ 1049              		.loc 1 207 0
+ 1050 004e 4FF04403 		mov	r3, #68
+ 1051 0052 C4F20203 		movt	r3, 16386
+ 1052 0056 7A88     		ldrh	r2, [r7, #2]
+ 1053 0058 5A60     		str	r2, [r3, #4]
+ 208:../src/ctrl.cpp **** 	DMA_Cmd(DMA_Channel_TX, ENABLE);
+ 1054              		.loc 1 208 0
+ 1055 005a 4FF04400 		mov	r0, #68
+ 1056 005e C4F20200 		movt	r0, 16386
+ 1057 0062 4FF00101 		mov	r1, #1
+ 1058 0066 FFF7FEFF 		bl	DMA_Cmd
+ 209:../src/ctrl.cpp **** }
+ 1059              		.loc 1 209 0
+ 1060 006a 07F10807 		add	r7, r7, #8
+ 1061 006e BD46     		mov	sp, r7
+ 1062 0070 80BD     		pop	{r7, pc}
+ 1063              		.cfi_endproc
+ 1064              	.LFE36:
+ 1066 0072 00BF     		.section	.rodata._ZL4iRpm,"a",%progbits
+ 1067              		.align	2
+ 1070              	_ZL4iRpm:
+ 1071 0000 49205250 		.ascii	"I RPM \000"
+ 1071      4D2000
+ 1072 0007 00       		.section	.rodata._ZL4iCte,"a",%progbits
+ 1073              		.align	2
+ 1076              	_ZL4iCte:
+ 1077 0000 49204354 		.ascii	"I CTE \000"
+ 1077      452000
+ 1078 0007 00       		.section	.rodata._ZL4iCur,"a",%progbits
+ 1079              		.align	2
+ 1082              	_ZL4iCur:
+ 1083 0000 49204355 		.ascii	"I CUR \000"
+ 1083      522000
+ 1084 0007 00       		.section	.rodata._ZL5iMotV,"a",%progbits
+ 1085              		.align	2
+ 1088              	_ZL5iMotV:
+ 1089 0000 4920564D 		.ascii	"I VMOT \000"
+ 1089      4F542000 
+ 1090              		.section	.rodata._ZL2mV,"a",%progbits
+ 1091              		.align	2
+ 1094              	_ZL2mV:
+ 1095 0000 20562000 		.ascii	" V \000"
+ 1096              		.section	.rodata._ZL2mP,"a",%progbits
+ 1097              		.align	2
+ 1100              	_ZL2mP:
+ 1101 0000 20502000 		.ascii	" P \000"
+ 1102              		.section	.rodata._ZL2mR,"a",%progbits
+ 1103              		.align	2
+ 1106              	_ZL2mR:
+ 1107 0000 20522000 		.ascii	" R \000"
+ 1108              		.section	.rodata._ZL7cStartV,"a",%progbits
+ 1109              		.align	2
+ 1112              	_ZL7cStartV:
+ 1113 0000 20535441 		.ascii	" START VEL\000"
+ 1113      52542056 
+ 1113      454C00
+ 1114 000b 00       		.section	.rodata._ZL7cStartP,"a",%progbits
+ 1115              		.align	2
+ 1118              	_ZL7cStartP:
+ 1119 0000 20535441 		.ascii	" START POS\000"
+ 1119      52542050 
+ 1119      4F5300
+ 1120 000b 00       		.section	.rodata._ZL5cStop,"a",%progbits
+ 1121              		.align	2
+ 1124              	_ZL5cStop:
+ 1125 0000 2053544F 		.ascii	" STOP\000"
+ 1125      5000
+ 1126 0006 0000     		.section	.rodata._ZL9cShutdown,"a",%progbits
+ 1127              		.align	2
+ 1130              	_ZL9cShutdown:
+ 1131 0000 20534855 		.ascii	" SHUTDOWN\000"
+ 1131      54444F57 
+ 1131      4E00
+ 1132 000a 0000     		.text
+ 1133              	.Letext0:
+ 1134              		.file 2 "/home/jachu/elektronika/STM32/gcc-arm-none-eabi-4_6-2012q4/bin/../lib/gcc/arm-none-eabi/4
+ 1135              		.file 3 "/home/jachu/workspaceSTM/Sumo_STM/src/stm32f10x.h"
+ 1136              		.file 4 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPerip
+ 1137              		.file 5 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPerip
+ 1138              		.file 6 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPerip
+ 1139              		.file 7 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupp
+ 1140              		.file 8 "../src/motor.h"
+ 1141              		.file 9 "../src/adc.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 ctrl.cpp
+     /tmp/ccfIsGHC.s:23     .bss.ctrlBuffer:00000000 ctrlBuffer
+     /tmp/ccfIsGHC.s:20     .bss.ctrlBuffer:00000000 $d
+     /tmp/ccfIsGHC.s:30     .bss.dmaBuffer:00000000 dmaBuffer
+     /tmp/ccfIsGHC.s:27     .bss.dmaBuffer:00000000 $d
+     /tmp/ccfIsGHC.s:36     .bss.ctrlPos:00000000 ctrlPos
+     /tmp/ccfIsGHC.s:37     .bss.ctrlPos:00000000 $d
+     /tmp/ccfIsGHC.s:39     .text._Z8ctrlInitv:00000000 $t
+     /tmp/ccfIsGHC.s:44     .text._Z8ctrlInitv:00000000 _Z8ctrlInitv
+     /tmp/ccfIsGHC.s:226    .text._Z9ctrlCheckv:00000000 $t
+     /tmp/ccfIsGHC.s:231    .text._Z9ctrlCheckv:00000000 _Z9ctrlCheckv
+     /tmp/ccfIsGHC.s:309    .text._Z16ctrlCheckAndExecv:00000000 $t
+     /tmp/ccfIsGHC.s:314    .text._Z16ctrlCheckAndExecv:00000000 _Z16ctrlCheckAndExecv
+     /tmp/ccfIsGHC.s:1094   .rodata._ZL2mV:00000000 _ZL2mV
+     /tmp/ccfIsGHC.s:1100   .rodata._ZL2mP:00000000 _ZL2mP
+     /tmp/ccfIsGHC.s:1106   .rodata._ZL2mR:00000000 _ZL2mR
+     /tmp/ccfIsGHC.s:1112   .rodata._ZL7cStartV:00000000 _ZL7cStartV
+     /tmp/ccfIsGHC.s:1118   .rodata._ZL7cStartP:00000000 _ZL7cStartP
+     /tmp/ccfIsGHC.s:1124   .rodata._ZL5cStop:00000000 _ZL5cStop
+     /tmp/ccfIsGHC.s:1130   .rodata._ZL9cShutdown:00000000 _ZL9cShutdown
+     /tmp/ccfIsGHC.s:779    .text._Z12ctrlSendInfov:00000000 $t
+     /tmp/ccfIsGHC.s:784    .text._Z12ctrlSendInfov:00000000 _Z12ctrlSendInfov
+     /tmp/ccfIsGHC.s:1070   .rodata._ZL4iRpm:00000000 _ZL4iRpm
+     /tmp/ccfIsGHC.s:923    .text._Z10appendInfoPcPKctf:00000000 _Z10appendInfoPcPKctf
+     /tmp/ccfIsGHC.s:1076   .rodata._ZL4iCte:00000000 _ZL4iCte
+     /tmp/ccfIsGHC.s:1082   .rodata._ZL4iCur:00000000 _ZL4iCur
+     /tmp/ccfIsGHC.s:1088   .rodata._ZL5iMotV:00000000 _ZL5iMotV
+     /tmp/ccfIsGHC.s:1001   .text._Z8ctrlSendPct:00000000 _Z8ctrlSendPct
+     /tmp/ccfIsGHC.s:918    .text._Z10appendInfoPcPKctf:00000000 $t
+     /tmp/ccfIsGHC.s:996    .text._Z8ctrlSendPct:00000000 $t
+     /tmp/ccfIsGHC.s:1067   .rodata._ZL4iRpm:00000000 $d
+     /tmp/ccfIsGHC.s:1073   .rodata._ZL4iCte:00000000 $d
+     /tmp/ccfIsGHC.s:1079   .rodata._ZL4iCur:00000000 $d
+     /tmp/ccfIsGHC.s:1085   .rodata._ZL5iMotV:00000000 $d
+     /tmp/ccfIsGHC.s:1091   .rodata._ZL2mV:00000000 $d
+     /tmp/ccfIsGHC.s:1097   .rodata._ZL2mP:00000000 $d
+     /tmp/ccfIsGHC.s:1103   .rodata._ZL2mR:00000000 $d
+     /tmp/ccfIsGHC.s:1109   .rodata._ZL7cStartV:00000000 $d
+     /tmp/ccfIsGHC.s:1115   .rodata._ZL7cStartP:00000000 $d
+     /tmp/ccfIsGHC.s:1121   .rodata._ZL5cStop:00000000 $d
+     /tmp/ccfIsGHC.s:1127   .rodata._ZL9cShutdown:00000000 $d
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+RCC_APB2PeriphClockCmd
+GPIO_Init
+RCC_AHBPeriphClockCmd
+DMA_Init
+USART_Init
+USART_DMACmd
+DMA_Cmd
+USART_Cmd
+DMA_GetCurrDataCounter
+_Z9strcmpLenPKcS0_t
+_Z4atofPfPc
+_Z11motorSetVelf
+_Z11motorSetPosf
+_Z11motorSetPidfff
+_Z11motorRunVelv
+_Z11motorRunPosv
+_Z9motorStopv
+_Z13motorShutdownv
+__aeabi_i2f
+cur_speed
+cpr
+cte_prev
+curMean
+motVMean
+strcpy
+_Z4ftoafPchh
+memcpy

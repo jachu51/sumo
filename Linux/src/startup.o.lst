@@ -1,0 +1,196 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m4
+   3              		.eabi_attribute 27, 3
+   4              		.eabi_attribute 28, 1
+   5              		.fpu fpv4-sp-d16
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 6
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.thumb
+  16              		.file	"startup.cpp"
+  17              		.text
+  18              	.Ltext0:
+  19              		.cfi_sections	.debug_frame
+  20              		.align	2
+  21              		.global	resetHandler
+  22              		.thumb
+  23              		.thumb_func
+  25              	resetHandler:
+  26              	.LFB1:
+  27              		.file 1 "../src/startup.cpp"
+   1:../src/startup.cpp **** /*******************************************************************************
+   2:../src/startup.cpp ****  *
+   3:../src/startup.cpp ****  * Copyright (C) 2012 Jorge Aparicio <jorge.aparicio.r@gmail.com>
+   4:../src/startup.cpp ****  *
+   5:../src/startup.cpp ****  * This file is part of bareCortexM.
+   6:../src/startup.cpp ****  *
+   7:../src/startup.cpp ****  * bareCortexM is free software: you can redistribute it and/or modify it under
+   8:../src/startup.cpp ****  * the terms of the GNU General Public License as published by the Free
+   9:../src/startup.cpp ****  * Software Foundation, either version 3 of the License, or (at your option)
+  10:../src/startup.cpp ****  * any later version.
+  11:../src/startup.cpp ****  *
+  12:../src/startup.cpp ****  * bareCortexM is distributed in the hope that it will be useful, but WITHOUT
+  13:../src/startup.cpp ****  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+  14:../src/startup.cpp ****  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+  15:../src/startup.cpp ****  * more details.
+  16:../src/startup.cpp ****  *
+  17:../src/startup.cpp ****  * You should have received a copy of the GNU General Public License along
+  18:../src/startup.cpp ****  * with bareCortexM. If not, see <http://www.gnu.org/licenses/>.
+  19:../src/startup.cpp ****  *
+  20:../src/startup.cpp ****  ******************************************************************************/
+  21:../src/startup.cpp **** 
+  22:../src/startup.cpp **** #include <stdint.h>
+  23:../src/startup.cpp **** 
+  24:../src/startup.cpp **** #define INLINE inline __attribute__((always_inline))
+  25:../src/startup.cpp **** typedef uint32_t u32;
+  26:../src/startup.cpp **** 
+  27:../src/startup.cpp **** int main();
+  28:../src/startup.cpp **** extern u32 __etext;
+  29:../src/startup.cpp **** extern u32 __data_start__;
+  30:../src/startup.cpp **** extern u32 __data_end__;
+  31:../src/startup.cpp **** extern u32 __bss_start__;
+  32:../src/startup.cpp **** extern u32 __bss_end__;
+  33:../src/startup.cpp **** 
+  34:../src/startup.cpp **** /**
+  35:../src/startup.cpp ****  * @brief Loads initialized data to RAM, and clears uninitialized data.
+  36:../src/startup.cpp ****  */
+  37:../src/startup.cpp **** static INLINE void initializeData()
+  38:../src/startup.cpp **** {
+  39:../src/startup.cpp ****   u32 *pSrc;
+  40:../src/startup.cpp ****   u32 *pDest;
+  41:../src/startup.cpp **** 
+  42:../src/startup.cpp ****   // Load initialized data from FLASH to RAM
+  43:../src/startup.cpp ****   pSrc = &__etext;
+  44:../src/startup.cpp ****   pDest = &__data_start__;
+  45:../src/startup.cpp **** 
+  46:../src/startup.cpp ****   while (pDest < &__data_end__)
+  47:../src/startup.cpp ****     *pDest++ = *pSrc++;
+  48:../src/startup.cpp **** 
+  49:../src/startup.cpp ****   // Clear uninitialized data
+  50:../src/startup.cpp ****   pDest = &__bss_start__;
+  51:../src/startup.cpp **** 
+  52:../src/startup.cpp ****   while (pDest < &__bss_end__)
+  53:../src/startup.cpp ****     *pDest++ = 0;
+  54:../src/startup.cpp **** }
+  55:../src/startup.cpp **** 
+  56:../src/startup.cpp **** extern "C" void resetHandler()
+  57:../src/startup.cpp **** {
+  28              		.loc 1 57 0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 8
+  31              		@ frame_needed = 1, uses_anonymous_args = 0
+  32 0000 80B5     		push	{r7, lr}
+  33              	.LCFI0:
+  34              		.cfi_def_cfa_offset 8
+  35              		.cfi_offset 14, -4
+  36              		.cfi_offset 7, -8
+  37 0002 82B0     		sub	sp, sp, #8
+  38              	.LCFI1:
+  39              		.cfi_def_cfa_offset 16
+  40 0004 00AF     		add	r7, sp, #0
+  41              	.LCFI2:
+  42              		.cfi_def_cfa_register 7
+  43              	.LBB5:
+  44              	.LBB6:
+  45              	.LBB7:
+  43:../src/startup.cpp ****   pSrc = &__etext;
+  46              		.loc 1 43 0
+  47 0006 40F20003 		movw	r3, #:lower16:__etext
+  48 000a C0F20003 		movt	r3, #:upper16:__etext
+  49 000e 7B60     		str	r3, [r7, #4]
+  44:../src/startup.cpp ****   pDest = &__data_start__;
+  50              		.loc 1 44 0
+  51 0010 40F20003 		movw	r3, #:lower16:__data_start__
+  52 0014 C0F20003 		movt	r3, #:upper16:__data_start__
+  53 0018 3B60     		str	r3, [r7, #0]
+  54 001a 0BE0     		b	.L2
+  55              	.L3:
+  47:../src/startup.cpp ****     *pDest++ = *pSrc++;
+  56              		.loc 1 47 0
+  57 001c 7B68     		ldr	r3, [r7, #4]
+  58 001e 1A68     		ldr	r2, [r3, #0]
+  59 0020 3B68     		ldr	r3, [r7, #0]
+  60 0022 1A60     		str	r2, [r3, #0]
+  61 0024 3B68     		ldr	r3, [r7, #0]
+  62 0026 03F10403 		add	r3, r3, #4
+  63 002a 3B60     		str	r3, [r7, #0]
+  64 002c 7B68     		ldr	r3, [r7, #4]
+  65 002e 03F10403 		add	r3, r3, #4
+  66 0032 7B60     		str	r3, [r7, #4]
+  67              	.L2:
+  46:../src/startup.cpp ****   while (pDest < &__data_end__)
+  68              		.loc 1 46 0
+  69 0034 3A68     		ldr	r2, [r7, #0]
+  70 0036 40F20003 		movw	r3, #:lower16:__data_end__
+  71 003a C0F20003 		movt	r3, #:upper16:__data_end__
+  72 003e 9A42     		cmp	r2, r3
+  73 0040 2CBF     		ite	cs
+  74 0042 0023     		movcs	r3, #0
+  75 0044 0123     		movcc	r3, #1
+  76 0046 DBB2     		uxtb	r3, r3
+  77 0048 002B     		cmp	r3, #0
+  78 004a E7D1     		bne	.L3
+  50:../src/startup.cpp ****   pDest = &__bss_start__;
+  79              		.loc 1 50 0
+  80 004c 40F20003 		movw	r3, #:lower16:__bss_start__
+  81 0050 C0F20003 		movt	r3, #:upper16:__bss_start__
+  82 0054 3B60     		str	r3, [r7, #0]
+  83 0056 07E0     		b	.L4
+  84              	.L5:
+  53:../src/startup.cpp ****     *pDest++ = 0;
+  85              		.loc 1 53 0
+  86 0058 3B68     		ldr	r3, [r7, #0]
+  87 005a 4FF00002 		mov	r2, #0
+  88 005e 1A60     		str	r2, [r3, #0]
+  89 0060 3B68     		ldr	r3, [r7, #0]
+  90 0062 03F10403 		add	r3, r3, #4
+  91 0066 3B60     		str	r3, [r7, #0]
+  92              	.L4:
+  52:../src/startup.cpp ****   while (pDest < &__bss_end__)
+  93              		.loc 1 52 0
+  94 0068 3A68     		ldr	r2, [r7, #0]
+  95 006a 40F20003 		movw	r3, #:lower16:__bss_end__
+  96 006e C0F20003 		movt	r3, #:upper16:__bss_end__
+  97 0072 9A42     		cmp	r2, r3
+  98 0074 2CBF     		ite	cs
+  99 0076 0023     		movcs	r3, #0
+ 100 0078 0123     		movcc	r3, #1
+ 101 007a DBB2     		uxtb	r3, r3
+ 102 007c 002B     		cmp	r3, #0
+ 103 007e EBD1     		bne	.L5
+ 104              	.LBE7:
+ 105              	.LBE6:
+ 106              	.LBE5:
+  58:../src/startup.cpp ****   initializeData();
+  59:../src/startup.cpp **** 
+  60:../src/startup.cpp ****   main();
+ 107              		.loc 1 60 0
+ 108 0080 FFF7FEFF 		bl	main
+  61:../src/startup.cpp **** }
+ 109              		.loc 1 61 0
+ 110 0084 07F10807 		add	r7, r7, #8
+ 111 0088 BD46     		mov	sp, r7
+ 112 008a 80BD     		pop	{r7, pc}
+ 113              		.cfi_endproc
+ 114              	.LFE1:
+ 116              	.Letext0:
+ 117              		.file 2 "/home/jachu/elektronika/STM32/gcc-arm-none-eabi-4_6-2012q4/bin/../lib/gcc/arm-none-eabi/4
+DEFINED SYMBOLS
+                            *ABS*:00000000 startup.cpp
+     /tmp/ccEktrV3.s:20     .text:00000000 $t
+     /tmp/ccEktrV3.s:25     .text:00000000 resetHandler
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+__etext
+__data_start__
+__data_end__
+__bss_start__
+__bss_end__
+main

@@ -1,0 +1,3480 @@
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 6
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"lcd.cpp"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.global	LcdCache
+  19              		.section	.bss.LcdCache,"aw",%nobits
+  20              		.align	2
+  23              	LcdCache:
+  24 0000 00000000 		.space	1024
+  24      00000000 
+  24      00000000 
+  24      00000000 
+  24      00000000 
+  25              		.global	LcdCacheIdx
+  26              		.section	.bss.LcdCacheIdx,"aw",%nobits
+  27              		.align	2
+  30              	LcdCacheIdx:
+  31 0000 00000000 		.space	4
+  32              		.global	LoWaterMark
+  33              		.section	.bss.LoWaterMark,"aw",%nobits
+  34              		.align	2
+  37              	LoWaterMark:
+  38 0000 00000000 		.space	4
+  39              		.global	HiWaterMark
+  40              		.section	.bss.HiWaterMark,"aw",%nobits
+  41              		.align	2
+  44              	HiWaterMark:
+  45 0000 00000000 		.space	4
+  46              		.global	UpdateLcd
+  47              		.section	.bss.UpdateLcd,"aw",%nobits
+  50              	UpdateLcd:
+  51 0000 00       		.space	1
+  52              		.global	PageAddress
+  53              		.section	.bss.PageAddress,"aw",%nobits
+  56              	PageAddress:
+  57 0000 00       		.space	1
+  58              		.section	.text._Z7LcdInitv,"ax",%progbits
+  59              		.align	2
+  60              		.global	_Z7LcdInitv
+  61              		.thumb
+  62              		.thumb_func
+  64              	_Z7LcdInitv:
+  65              	.LFB31:
+  66              		.file 1 "../src/lcd.cpp"
+   1:../src/lcd.cpp **** /*
+   2:../src/lcd.cpp ****  * lcd.cpp
+   3:../src/lcd.cpp ****  *
+   4:../src/lcd.cpp ****  *  Created on: 27-03-2013
+   5:../src/lcd.cpp ****  *      Author: jachu
+   6:../src/lcd.cpp ****  */
+   7:../src/lcd.cpp **** 
+   8:../src/lcd.cpp **** #include "lcd.h"
+   9:../src/lcd.cpp **** #include "sys.h"
+  10:../src/lcd.cpp **** #include <stm32f10x_gpio.h>
+  11:../src/lcd.cpp **** #include <stm32f10x_spi.h>
+  12:../src/lcd.cpp **** #include <string.h>
+  13:../src/lcd.cpp **** 
+  14:../src/lcd.cpp **** /* Function prototypes */
+  15:../src/lcd.cpp **** 
+  16:../src/lcd.cpp **** void Delay      ( void );
+  17:../src/lcd.cpp **** 
+  18:../src/lcd.cpp **** /* Global variables */
+  19:../src/lcd.cpp **** 
+  20:../src/lcd.cpp **** /* Cache buffer in SRAM 128*64 bits or 1024 bytes */
+  21:../src/lcd.cpp **** byte  LcdCache [ LCD_CACHE_SIZE ];
+  22:../src/lcd.cpp **** 
+  23:../src/lcd.cpp **** /* Cache index */
+  24:../src/lcd.cpp **** int   LcdCacheIdx;
+  25:../src/lcd.cpp **** 
+  26:../src/lcd.cpp **** /* Lower part of water mark */
+  27:../src/lcd.cpp **** int   LoWaterMark;
+  28:../src/lcd.cpp **** 
+  29:../src/lcd.cpp **** /* Higher part of water mark */
+  30:../src/lcd.cpp **** int   HiWaterMark;
+  31:../src/lcd.cpp **** 
+  32:../src/lcd.cpp **** /* Variable to decide whether update Lcd Cache is active/nonactive */
+  33:../src/lcd.cpp **** volatile bool  UpdateLcd;
+  34:../src/lcd.cpp **** 
+  35:../src/lcd.cpp **** /* Variable that determine actually updated page index */
+  36:../src/lcd.cpp **** volatile byte	PageAddress;
+  37:../src/lcd.cpp **** 
+  38:../src/lcd.cpp **** /*
+  39:../src/lcd.cpp ****  * Name         :  LcdInit
+  40:../src/lcd.cpp ****  * Description  :  Performs MCU SPI & LCD controller initialization.
+  41:../src/lcd.cpp ****  * Argument(s)  :  None.
+  42:../src/lcd.cpp ****  * Return value :  None.
+  43:../src/lcd.cpp ****  */
+  44:../src/lcd.cpp **** 
+  45:../src/lcd.cpp **** void LcdInit ( void )
+  46:../src/lcd.cpp **** {
+  67              		.loc 1 46 0
+  68              		.cfi_startproc
+  69              		@ args = 0, pretend = 0, frame = 72
+  70              		@ frame_needed = 1, uses_anonymous_args = 0
+  71 0000 80B5     		push	{r7, lr}
+  72              	.LCFI0:
+  73              		.cfi_def_cfa_offset 8
+  74              		.cfi_offset 14, -4
+  75              		.cfi_offset 7, -8
+  76 0002 92B0     		sub	sp, sp, #72
+  77              	.LCFI1:
+  78              		.cfi_def_cfa_offset 80
+  79 0004 00AF     		add	r7, sp, #0
+  80              	.LCFI2:
+  81              		.cfi_def_cfa_register 7
+  82              	.LBB2:
+  47:../src/lcd.cpp ****     /* GPIO configuration */
+  48:../src/lcd.cpp **** 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+  83              		.loc 1 48 0
+  84 0006 4FF00400 		mov	r0, #4
+  85 000a 4FF00101 		mov	r1, #1
+  86 000e FFF7FEFF 		bl	RCC_APB2PeriphClockCmd
+  49:../src/lcd.cpp **** 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+  87              		.loc 1 49 0
+  88 0012 4FF00100 		mov	r0, #1
+  89 0016 4FF00101 		mov	r1, #1
+  90 001a FFF7FEFF 		bl	RCC_APB2PeriphClockCmd
+  50:../src/lcd.cpp **** 
+  51:../src/lcd.cpp **** 	GPIO_InitTypeDef gpioInit;
+  52:../src/lcd.cpp **** 	gpioInit.GPIO_Pin = LCD_SPI_MOSI | LCD_SPI_SCK;
+  91              		.loc 1 52 0
+  92 001e 4FF0A003 		mov	r3, #160
+  93 0022 A7F84430 		strh	r3, [r7, #68]	@ movhi
+  53:../src/lcd.cpp **** 	gpioInit.GPIO_Mode = GPIO_Mode_AF_PP;
+  94              		.loc 1 53 0
+  95 0026 4FF01803 		mov	r3, #24
+  96 002a 87F84730 		strb	r3, [r7, #71]
+  54:../src/lcd.cpp **** 	gpioInit.GPIO_Speed = GPIO_Speed_50MHz;
+  97              		.loc 1 54 0
+  98 002e 4FF00303 		mov	r3, #3
+  99 0032 87F84630 		strb	r3, [r7, #70]
+  55:../src/lcd.cpp **** 	GPIO_Init(LCD_GPIO, &gpioInit);
+ 100              		.loc 1 55 0
+ 101 0036 07F14403 		add	r3, r7, #68
+ 102 003a 4FF40060 		mov	r0, #2048
+ 103 003e C4F20100 		movt	r0, 16385
+ 104 0042 1946     		mov	r1, r3
+ 105 0044 FFF7FEFF 		bl	GPIO_Init
+  56:../src/lcd.cpp **** 
+  57:../src/lcd.cpp **** 	gpioInit.GPIO_Pin = LCD_DC | LCD_RES | LCD_SPI_CS;
+ 106              		.loc 1 57 0
+ 107 0048 4FF05803 		mov	r3, #88
+ 108 004c A7F84430 		strh	r3, [r7, #68]	@ movhi
+  58:../src/lcd.cpp **** 	gpioInit.GPIO_Mode = GPIO_Mode_Out_PP;
+ 109              		.loc 1 58 0
+ 110 0050 4FF01003 		mov	r3, #16
+ 111 0054 87F84730 		strb	r3, [r7, #71]
+  59:../src/lcd.cpp **** 	GPIO_Init(LCD_GPIO, &gpioInit);
+ 112              		.loc 1 59 0
+ 113 0058 07F14403 		add	r3, r7, #68
+ 114 005c 4FF40060 		mov	r0, #2048
+ 115 0060 C4F20100 		movt	r0, 16385
+ 116 0064 1946     		mov	r1, r3
+ 117 0066 FFF7FEFF 		bl	GPIO_Init
+  60:../src/lcd.cpp **** 
+  61:../src/lcd.cpp **** 	/* SPI configuration */
+  62:../src/lcd.cpp **** 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
+ 118              		.loc 1 62 0
+ 119 006a 4FF48050 		mov	r0, #4096
+ 120 006e 4FF00101 		mov	r1, #1
+ 121 0072 FFF7FEFF 		bl	RCC_APB2PeriphClockCmd
+  63:../src/lcd.cpp **** 	SPI_InitTypeDef spiInit;
+  64:../src/lcd.cpp **** 	spiInit.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_16;
+ 122              		.loc 1 64 0
+ 123 0076 4FF01803 		mov	r3, #24
+ 124 007a BB87     		strh	r3, [r7, #60]	@ movhi
+  65:../src/lcd.cpp **** 	spiInit.SPI_CPHA = SPI_CPHA_2Edge;
+ 125              		.loc 1 65 0
+ 126 007c 4FF00103 		mov	r3, #1
+ 127 0080 3B87     		strh	r3, [r7, #56]	@ movhi
+  66:../src/lcd.cpp **** 	spiInit.SPI_CPOL = SPI_CPOL_High;
+ 128              		.loc 1 66 0
+ 129 0082 4FF00203 		mov	r3, #2
+ 130 0086 FB86     		strh	r3, [r7, #54]	@ movhi
+  67:../src/lcd.cpp **** 	spiInit.SPI_DataSize = SPI_DataSize_8b;
+ 131              		.loc 1 67 0
+ 132 0088 4FF00003 		mov	r3, #0
+ 133 008c BB86     		strh	r3, [r7, #52]	@ movhi
+  68:../src/lcd.cpp **** 	spiInit.SPI_Direction = SPI_Direction_1Line_Tx;
+ 134              		.loc 1 68 0
+ 135 008e 4FF44043 		mov	r3, #49152
+ 136 0092 3B86     		strh	r3, [r7, #48]	@ movhi
+  69:../src/lcd.cpp **** 	spiInit.SPI_FirstBit = SPI_FirstBit_MSB;
+ 137              		.loc 1 69 0
+ 138 0094 4FF00003 		mov	r3, #0
+ 139 0098 FB87     		strh	r3, [r7, #62]	@ movhi
+  70:../src/lcd.cpp **** 	spiInit.SPI_Mode = SPI_Mode_Master;
+ 140              		.loc 1 70 0
+ 141 009a 4FF48273 		mov	r3, #260
+ 142 009e 7B86     		strh	r3, [r7, #50]	@ movhi
+  71:../src/lcd.cpp **** 	spiInit.SPI_NSS = SPI_NSS_Soft;
+ 143              		.loc 1 71 0
+ 144 00a0 4FF40073 		mov	r3, #512
+ 145 00a4 7B87     		strh	r3, [r7, #58]	@ movhi
+  72:../src/lcd.cpp **** 	SPI_Init(LCD_SPI, &spiInit);
+ 146              		.loc 1 72 0
+ 147 00a6 07F13003 		add	r3, r7, #48
+ 148 00aa 4FF44050 		mov	r0, #12288
+ 149 00ae C4F20100 		movt	r0, 16385
+ 150 00b2 1946     		mov	r1, r3
+ 151 00b4 FFF7FEFF 		bl	SPI_Init
+  73:../src/lcd.cpp **** 	SPI_SSOutputCmd(LCD_SPI, ENABLE);
+ 152              		.loc 1 73 0
+ 153 00b8 4FF44050 		mov	r0, #12288
+ 154 00bc C4F20100 		movt	r0, 16385
+ 155 00c0 4FF00101 		mov	r1, #1
+ 156 00c4 FFF7FEFF 		bl	SPI_SSOutputCmd
+  74:../src/lcd.cpp **** 
+  75:../src/lcd.cpp **** 	/* DMA configuration */
+  76:../src/lcd.cpp **** 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+ 157              		.loc 1 76 0
+ 158 00c8 4FF00100 		mov	r0, #1
+ 159 00cc 4FF00101 		mov	r1, #1
+ 160 00d0 FFF7FEFF 		bl	RCC_AHBPeriphClockCmd
+  77:../src/lcd.cpp **** 	DMA_InitTypeDef dmaInit;
+  78:../src/lcd.cpp **** 	dmaInit.DMA_BufferSize = LCD_X_RES;
+ 161              		.loc 1 78 0
+ 162 00d4 4FF08003 		mov	r3, #128
+ 163 00d8 FB60     		str	r3, [r7, #12]
+  79:../src/lcd.cpp **** 	dmaInit.DMA_DIR = DMA_DIR_PeripheralDST;
+ 164              		.loc 1 79 0
+ 165 00da 4FF01003 		mov	r3, #16
+ 166 00de BB60     		str	r3, [r7, #8]
+  80:../src/lcd.cpp **** 	dmaInit.DMA_M2M = DMA_M2M_Disable;
+ 167              		.loc 1 80 0
+ 168 00e0 4FF00003 		mov	r3, #0
+ 169 00e4 BB62     		str	r3, [r7, #40]
+  81:../src/lcd.cpp **** 	dmaInit.DMA_MemoryBaseAddr = (uint32_t)(LcdCache);
+ 170              		.loc 1 81 0
+ 171 00e6 40F20003 		movw	r3, #:lower16:LcdCache
+ 172 00ea C0F20003 		movt	r3, #:upper16:LcdCache
+ 173 00ee 7B60     		str	r3, [r7, #4]
+  82:../src/lcd.cpp **** 	dmaInit.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+ 174              		.loc 1 82 0
+ 175 00f0 4FF00003 		mov	r3, #0
+ 176 00f4 FB61     		str	r3, [r7, #28]
+  83:../src/lcd.cpp **** 	dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
+ 177              		.loc 1 83 0
+ 178 00f6 4FF08003 		mov	r3, #128
+ 179 00fa 7B61     		str	r3, [r7, #20]
+  84:../src/lcd.cpp **** 	dmaInit.DMA_Mode = DMA_Mode_Normal;
+ 180              		.loc 1 84 0
+ 181 00fc 4FF00003 		mov	r3, #0
+ 182 0100 3B62     		str	r3, [r7, #32]
+  85:../src/lcd.cpp **** 	dmaInit.DMA_PeripheralBaseAddr = (uint32_t)&(SPI1->DR);
+ 183              		.loc 1 85 0
+ 184 0102 43F20C03 		movw	r3, #12300
+ 185 0106 C4F20103 		movt	r3, 16385
+ 186 010a 3B60     		str	r3, [r7, #0]
+  86:../src/lcd.cpp **** 	dmaInit.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+ 187              		.loc 1 86 0
+ 188 010c 4FF00003 		mov	r3, #0
+ 189 0110 BB61     		str	r3, [r7, #24]
+  87:../src/lcd.cpp **** 	dmaInit.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+ 190              		.loc 1 87 0
+ 191 0112 4FF00003 		mov	r3, #0
+ 192 0116 3B61     		str	r3, [r7, #16]
+  88:../src/lcd.cpp **** 	dmaInit.DMA_Priority = DMA_Priority_Low;
+ 193              		.loc 1 88 0
+ 194 0118 4FF00003 		mov	r3, #0
+ 195 011c 7B62     		str	r3, [r7, #36]
+  89:../src/lcd.cpp **** 	DMA_Init(LCD_DMA_CHANNEL, &dmaInit);
+ 196              		.loc 1 89 0
+ 197 011e 3B46     		mov	r3, r7
+ 198 0120 4FF03000 		mov	r0, #48
+ 199 0124 C4F20200 		movt	r0, 16386
+ 200 0128 1946     		mov	r1, r3
+ 201 012a FFF7FEFF 		bl	DMA_Init
+  90:../src/lcd.cpp **** 	DMA_ITConfig(LCD_DMA_CHANNEL, DMA_IT_TC, ENABLE);
+ 202              		.loc 1 90 0
+ 203 012e 4FF03000 		mov	r0, #48
+ 204 0132 C4F20200 		movt	r0, 16386
+ 205 0136 4FF00201 		mov	r1, #2
+ 206 013a 4FF00102 		mov	r2, #1
+ 207 013e FFF7FEFF 		bl	DMA_ITConfig
+  91:../src/lcd.cpp **** 
+  92:../src/lcd.cpp **** 	NVIC_InitTypeDef initNVIC;
+  93:../src/lcd.cpp **** 	initNVIC.NVIC_IRQChannel = DMA1_Channel3_IRQn;
+ 208              		.loc 1 93 0
+ 209 0142 4FF00D03 		mov	r3, #13
+ 210 0146 87F82C30 		strb	r3, [r7, #44]
+  94:../src/lcd.cpp **** 	initNVIC.NVIC_IRQChannelPreemptionPriority = 0;
+ 211              		.loc 1 94 0
+ 212 014a 4FF00003 		mov	r3, #0
+ 213 014e 87F82D30 		strb	r3, [r7, #45]
+  95:../src/lcd.cpp **** 	initNVIC.NVIC_IRQChannelSubPriority = 0;
+ 214              		.loc 1 95 0
+ 215 0152 4FF00003 		mov	r3, #0
+ 216 0156 87F82E30 		strb	r3, [r7, #46]
+  96:../src/lcd.cpp **** 	initNVIC.NVIC_IRQChannelCmd = ENABLE;
+ 217              		.loc 1 96 0
+ 218 015a 4FF00103 		mov	r3, #1
+ 219 015e 87F82F30 		strb	r3, [r7, #47]
+  97:../src/lcd.cpp **** 	NVIC_Init(&initNVIC);
+ 220              		.loc 1 97 0
+ 221 0162 07F12C03 		add	r3, r7, #44
+ 222 0166 1846     		mov	r0, r3
+ 223 0168 FFF7FEFF 		bl	NVIC_Init
+  98:../src/lcd.cpp **** 
+  99:../src/lcd.cpp **** 	SPI_I2S_DMACmd(LCD_SPI, SPI_I2S_DMAReq_Tx, ENABLE);
+ 224              		.loc 1 99 0
+ 225 016c 4FF44050 		mov	r0, #12288
+ 226 0170 C4F20100 		movt	r0, 16385
+ 227 0174 4FF00201 		mov	r1, #2
+ 228 0178 4FF00102 		mov	r2, #1
+ 229 017c FFF7FEFF 		bl	SPI_I2S_DMACmd
+ 100:../src/lcd.cpp **** 	SPI_Cmd(LCD_SPI, ENABLE);
+ 230              		.loc 1 100 0
+ 231 0180 4FF44050 		mov	r0, #12288
+ 232 0184 C4F20100 		movt	r0, 16385
+ 233 0188 4FF00101 		mov	r1, #1
+ 234 018c FFF7FEFF 		bl	SPI_Cmd
+ 101:../src/lcd.cpp **** 
+ 102:../src/lcd.cpp **** 	/* LCD initialization */
+ 103:../src/lcd.cpp **** 	//reset
+ 104:../src/lcd.cpp **** 	GPIO_ResetBits(LCD_GPIO, LCD_SPI_CS);
+ 235              		.loc 1 104 0
+ 236 0190 4FF40060 		mov	r0, #2048
+ 237 0194 C4F20100 		movt	r0, 16385
+ 238 0198 4FF01001 		mov	r1, #16
+ 239 019c FFF7FEFF 		bl	GPIO_ResetBits
+ 105:../src/lcd.cpp **** 	GPIO_ResetBits(LCD_GPIO, LCD_RES);
+ 240              		.loc 1 105 0
+ 241 01a0 4FF40060 		mov	r0, #2048
+ 242 01a4 C4F20100 		movt	r0, 16385
+ 243 01a8 4FF04001 		mov	r1, #64
+ 244 01ac FFF7FEFF 		bl	GPIO_ResetBits
+ 106:../src/lcd.cpp **** 	sysDelayMs(500);
+ 245              		.loc 1 106 0
+ 246 01b0 4FF4FA70 		mov	r0, #500
+ 247 01b4 FFF7FEFF 		bl	_Z10sysDelayMsj
+ 107:../src/lcd.cpp **** 	GPIO_SetBits(LCD_GPIO, LCD_RES);
+ 248              		.loc 1 107 0
+ 249 01b8 4FF40060 		mov	r0, #2048
+ 250 01bc C4F20100 		movt	r0, 16385
+ 251 01c0 4FF04001 		mov	r1, #64
+ 252 01c4 FFF7FEFF 		bl	GPIO_SetBits
+ 108:../src/lcd.cpp **** 
+ 109:../src/lcd.cpp **** 
+ 110:../src/lcd.cpp **** 	//LCD bias - 1/7
+ 111:../src/lcd.cpp **** 	LcdSend(CMD_SET_BIAS_7, LCD_CMD);
+ 253              		.loc 1 111 0
+ 254 01c8 4FF0A300 		mov	r0, #163
+ 255 01cc 4FF00001 		mov	r1, #0
+ 256 01d0 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 112:../src/lcd.cpp **** 
+ 113:../src/lcd.cpp **** 	//ADC selection - normal - default
+ 114:../src/lcd.cpp **** 	LcdSend(CMD_SET_ADC_NORMAL, LCD_CMD);
+ 257              		.loc 1 114 0
+ 258 01d4 4FF0A000 		mov	r0, #160
+ 259 01d8 4FF00001 		mov	r1, #0
+ 260 01dc FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 115:../src/lcd.cpp **** 
+ 116:../src/lcd.cpp **** 	//Common output mode - normal - default
+ 117:../src/lcd.cpp **** 	LcdSend(CMD_SET_COM_REVERSE, LCD_CMD);
+ 261              		.loc 1 117 0
+ 262 01e0 4FF0C800 		mov	r0, #200
+ 263 01e4 4FF00001 		mov	r1, #0
+ 264 01e8 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 118:../src/lcd.cpp **** 
+ 119:../src/lcd.cpp **** 	// Initial display line
+ 120:../src/lcd.cpp **** 	LcdSend(CMD_SET_DISP_START_LINE, LCD_CMD);
+ 265              		.loc 1 120 0
+ 266 01ec 4FF04000 		mov	r0, #64
+ 267 01f0 4FF00001 		mov	r1, #0
+ 268 01f4 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 121:../src/lcd.cpp **** 
+ 122:../src/lcd.cpp **** 	//Booster on, voltage regulator circuit on, voltage follower circuit on
+ 123:../src/lcd.cpp **** 	LcdSend(CMD_SET_POWER_CONTROL | 0x4, LCD_CMD);
+ 269              		.loc 1 123 0
+ 270 01f8 4FF02C00 		mov	r0, #44
+ 271 01fc 4FF00001 		mov	r1, #0
+ 272 0200 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 124:../src/lcd.cpp **** 	sysDelayMs(50);
+ 273              		.loc 1 124 0
+ 274 0204 4FF03200 		mov	r0, #50
+ 275 0208 FFF7FEFF 		bl	_Z10sysDelayMsj
+ 125:../src/lcd.cpp **** 	LcdSend(CMD_SET_POWER_CONTROL | 0x6, LCD_CMD);
+ 276              		.loc 1 125 0
+ 277 020c 4FF02E00 		mov	r0, #46
+ 278 0210 4FF00001 		mov	r1, #0
+ 279 0214 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 126:../src/lcd.cpp **** 	sysDelayMs(50);
+ 280              		.loc 1 126 0
+ 281 0218 4FF03200 		mov	r0, #50
+ 282 021c FFF7FEFF 		bl	_Z10sysDelayMsj
+ 127:../src/lcd.cpp **** 	LcdSend(CMD_SET_POWER_CONTROL | 0x7, LCD_CMD);
+ 283              		.loc 1 127 0
+ 284 0220 4FF02F00 		mov	r0, #47
+ 285 0224 4FF00001 		mov	r1, #0
+ 286 0228 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 128:../src/lcd.cpp **** 	sysDelayMs(10);
+ 287              		.loc 1 128 0
+ 288 022c 4FF00A00 		mov	r0, #10
+ 289 0230 FFF7FEFF 		bl	_Z10sysDelayMsj
+ 129:../src/lcd.cpp **** 
+ 130:../src/lcd.cpp **** 	//Internal V0 regulator resistor ratio
+ 131:../src/lcd.cpp **** 	LcdSend(CMD_SET_RESISTOR_RATIO | 0x6, LCD_CMD);
+ 290              		.loc 1 131 0
+ 291 0234 4FF02600 		mov	r0, #38
+ 292 0238 4FF00001 		mov	r1, #0
+ 293 023c FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 132:../src/lcd.cpp **** 
+ 133:../src/lcd.cpp **** 	LcdSend(CMD_SET_ALLPTS_NORMAL, LCD_CMD);
+ 294              		.loc 1 133 0
+ 295 0240 4FF0A400 		mov	r0, #164
+ 296 0244 4FF00001 		mov	r1, #0
+ 297 0248 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 134:../src/lcd.cpp **** 
+ 135:../src/lcd.cpp **** 	//Display on
+ 136:../src/lcd.cpp **** 	LcdSend(CMD_DISPLAY_ON, LCD_CMD);
+ 298              		.loc 1 136 0
+ 299 024c 4FF0AF00 		mov	r0, #175
+ 300 0250 4FF00001 		mov	r1, #0
+ 301 0254 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 137:../src/lcd.cpp **** 
+ 138:../src/lcd.cpp **** 	//Electronic volume control - 40
+ 139:../src/lcd.cpp **** 	LcdSend(CMD_SET_VOLUME_FIRST, LCD_CMD);
+ 302              		.loc 1 139 0
+ 303 0258 4FF08100 		mov	r0, #129
+ 304 025c 4FF00001 		mov	r1, #0
+ 305 0260 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 140:../src/lcd.cpp **** 	LcdSend(CMD_SET_VOLUME_SECOND | 0x3f, LCD_CMD);
+ 306              		.loc 1 140 0
+ 307 0264 4FF03F00 		mov	r0, #63
+ 308 0268 4FF00001 		mov	r1, #0
+ 309 026c FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 141:../src/lcd.cpp **** 
+ 142:../src/lcd.cpp ****     /* Reset watermark pointers to empty */
+ 143:../src/lcd.cpp ****     LoWaterMark = LCD_CACHE_SIZE;
+ 310              		.loc 1 143 0
+ 311 0270 40F20003 		movw	r3, #:lower16:LoWaterMark
+ 312 0274 C0F20003 		movt	r3, #:upper16:LoWaterMark
+ 313 0278 4FF48062 		mov	r2, #1024
+ 314 027c 1A60     		str	r2, [r3, #0]
+ 144:../src/lcd.cpp ****     HiWaterMark = 0;
+ 315              		.loc 1 144 0
+ 316 027e 40F20003 		movw	r3, #:lower16:HiWaterMark
+ 317 0282 C0F20003 		movt	r3, #:upper16:HiWaterMark
+ 318 0286 4FF00002 		mov	r2, #0
+ 319 028a 1A60     		str	r2, [r3, #0]
+ 145:../src/lcd.cpp **** 
+ 146:../src/lcd.cpp ****     /* Clear display on first time use */
+ 147:../src/lcd.cpp ****     LcdClear();
+ 320              		.loc 1 147 0
+ 321 028c FFF7FEFF 		bl	_Z8LcdClearv
+ 148:../src/lcd.cpp ****     UpdateLcd = false;
+ 322              		.loc 1 148 0
+ 323 0290 40F20003 		movw	r3, #:lower16:UpdateLcd
+ 324 0294 C0F20003 		movt	r3, #:upper16:UpdateLcd
+ 325 0298 4FF00002 		mov	r2, #0
+ 326 029c 1A70     		strb	r2, [r3, #0]
+ 149:../src/lcd.cpp ****     LcdCacheIdx = 0;
+ 327              		.loc 1 149 0
+ 328 029e 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 329 02a2 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 330 02a6 4FF00002 		mov	r2, #0
+ 331 02aa 1A60     		str	r2, [r3, #0]
+ 332              	.LBE2:
+ 150:../src/lcd.cpp **** }
+ 333              		.loc 1 150 0
+ 334 02ac 07F14807 		add	r7, r7, #72
+ 335 02b0 BD46     		mov	sp, r7
+ 336 02b2 80BD     		pop	{r7, pc}
+ 337              		.cfi_endproc
+ 338              	.LFE31:
+ 340              		.section	.text._Z11LcdContrasth,"ax",%progbits
+ 341              		.align	2
+ 342              		.global	_Z11LcdContrasth
+ 343              		.thumb
+ 344              		.thumb_func
+ 346              	_Z11LcdContrasth:
+ 347              	.LFB32:
+ 151:../src/lcd.cpp **** 
+ 152:../src/lcd.cpp **** /*
+ 153:../src/lcd.cpp ****  * Name         :  LcdContrast
+ 154:../src/lcd.cpp ****  * Description  :  Set display contrast.
+ 155:../src/lcd.cpp ****  * Argument(s)  :  contrast -> Contrast value from 0x00 to 0x7F.
+ 156:../src/lcd.cpp ****  * Return value :  None.
+ 157:../src/lcd.cpp ****  */
+ 158:../src/lcd.cpp **** void LcdContrast ( byte contrast )
+ 159:../src/lcd.cpp **** {
+ 348              		.loc 1 159 0
+ 349              		.cfi_startproc
+ 350              		@ args = 0, pretend = 0, frame = 8
+ 351              		@ frame_needed = 1, uses_anonymous_args = 0
+ 352 0000 80B5     		push	{r7, lr}
+ 353              	.LCFI3:
+ 354              		.cfi_def_cfa_offset 8
+ 355              		.cfi_offset 14, -4
+ 356              		.cfi_offset 7, -8
+ 357 0002 82B0     		sub	sp, sp, #8
+ 358              	.LCFI4:
+ 359              		.cfi_def_cfa_offset 16
+ 360 0004 00AF     		add	r7, sp, #0
+ 361              	.LCFI5:
+ 362              		.cfi_def_cfa_register 7
+ 363 0006 0346     		mov	r3, r0
+ 364 0008 FB71     		strb	r3, [r7, #7]
+ 160:../src/lcd.cpp ****     /* LCD Extended Commands. */
+ 161:../src/lcd.cpp ****     LcdSend( 0x21, LCD_CMD );
+ 365              		.loc 1 161 0
+ 366 000a 4FF02100 		mov	r0, #33
+ 367 000e 4FF00001 		mov	r1, #0
+ 368 0012 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 162:../src/lcd.cpp **** 
+ 163:../src/lcd.cpp ****     /* Set LCD contrast level. */
+ 164:../src/lcd.cpp ****     LcdSend( 0x80 | contrast, LCD_CMD );
+ 369              		.loc 1 164 0
+ 370 0016 FB79     		ldrb	r3, [r7, #7]
+ 371 0018 63F07F03 		orn	r3, r3, #127
+ 372 001c DBB2     		uxtb	r3, r3
+ 373 001e 1846     		mov	r0, r3
+ 374 0020 4FF00001 		mov	r1, #0
+ 375 0024 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 165:../src/lcd.cpp **** 
+ 166:../src/lcd.cpp ****     /* LCD Standard Commands, horizontal addressing mode. */
+ 167:../src/lcd.cpp ****     LcdSend( 0x20, LCD_CMD );
+ 376              		.loc 1 167 0
+ 377 0028 4FF02000 		mov	r0, #32
+ 378 002c 4FF00001 		mov	r1, #0
+ 379 0030 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 168:../src/lcd.cpp **** }
+ 380              		.loc 1 168 0
+ 381 0034 07F10807 		add	r7, r7, #8
+ 382 0038 BD46     		mov	sp, r7
+ 383 003a 80BD     		pop	{r7, pc}
+ 384              		.cfi_endproc
+ 385              	.LFE32:
+ 387              		.section	.text._Z8LcdClearv,"ax",%progbits
+ 388              		.align	2
+ 389              		.global	_Z8LcdClearv
+ 390              		.thumb
+ 391              		.thumb_func
+ 393              	_Z8LcdClearv:
+ 394              	.LFB33:
+ 169:../src/lcd.cpp **** 
+ 170:../src/lcd.cpp **** /*
+ 171:../src/lcd.cpp ****  * Name         :  LcdClear
+ 172:../src/lcd.cpp ****  * Description  :  Clears the display. LcdUpdate must be called next.
+ 173:../src/lcd.cpp ****  * Argument(s)  :  None.
+ 174:../src/lcd.cpp ****  * Return value :  None.
+ 175:../src/lcd.cpp ****  * Note         :  Based on Sylvain Bissonette's code
+ 176:../src/lcd.cpp ****  */
+ 177:../src/lcd.cpp **** void LcdClear ( void )
+ 178:../src/lcd.cpp **** {
+ 395              		.loc 1 178 0
+ 396              		.cfi_startproc
+ 397              		@ args = 0, pretend = 0, frame = 0
+ 398              		@ frame_needed = 1, uses_anonymous_args = 0
+ 399 0000 80B5     		push	{r7, lr}
+ 400              	.LCFI6:
+ 401              		.cfi_def_cfa_offset 8
+ 402              		.cfi_offset 14, -4
+ 403              		.cfi_offset 7, -8
+ 404 0002 00AF     		add	r7, sp, #0
+ 405              	.LCFI7:
+ 406              		.cfi_def_cfa_register 7
+ 179:../src/lcd.cpp **** // Removed in version 0.2.6, March 14 2009
+ 180:../src/lcd.cpp **** // Optimized by Jakub Lasinski
+ 181:../src/lcd.cpp **** //    int i;
+ 182:../src/lcd.cpp **** //
+ 183:../src/lcd.cpp **** //    /* Set 0x00 to all LcdCache's contents */
+ 184:../src/lcd.cpp **** //    for ( i = 0; i < LCD_CACHE_SIZE; i++ )
+ 185:../src/lcd.cpp **** //    {
+ 186:../src/lcd.cpp **** //        LcdCache[ i ] = 0x00;
+ 187:../src/lcd.cpp **** //    }
+ 188:../src/lcd.cpp **** 	memset(LcdCache,0x00,LCD_CACHE_SIZE); //Sugestion - its faster and its 10 bytes less in program me
+ 407              		.loc 1 188 0
+ 408 0004 40F20003 		movw	r3, #:lower16:LcdCache
+ 409 0008 C0F20003 		movt	r3, #:upper16:LcdCache
+ 410 000c 1A46     		mov	r2, r3
+ 411 000e 4FF48063 		mov	r3, #1024
+ 412 0012 1046     		mov	r0, r2
+ 413 0014 4FF00001 		mov	r1, #0
+ 414 0018 1A46     		mov	r2, r3
+ 415 001a FFF7FEFF 		bl	memset
+ 189:../src/lcd.cpp ****     /* Reset watermark pointers to full */
+ 190:../src/lcd.cpp ****     LoWaterMark = 0;
+ 416              		.loc 1 190 0
+ 417 001e 40F20003 		movw	r3, #:lower16:LoWaterMark
+ 418 0022 C0F20003 		movt	r3, #:upper16:LoWaterMark
+ 419 0026 4FF00002 		mov	r2, #0
+ 420 002a 1A60     		str	r2, [r3, #0]
+ 191:../src/lcd.cpp ****     HiWaterMark = LCD_CACHE_SIZE - 1;
+ 421              		.loc 1 191 0
+ 422 002c 40F20003 		movw	r3, #:lower16:HiWaterMark
+ 423 0030 C0F20003 		movt	r3, #:upper16:HiWaterMark
+ 424 0034 40F2FF32 		movw	r2, #1023
+ 425 0038 1A60     		str	r2, [r3, #0]
+ 192:../src/lcd.cpp **** 
+ 193:../src/lcd.cpp ****     /* Set update flag to be true */
+ 194:../src/lcd.cpp ****     //UpdateLcd = TRUE;
+ 195:../src/lcd.cpp **** }
+ 426              		.loc 1 195 0
+ 427 003a 80BD     		pop	{r7, pc}
+ 428              		.cfi_endproc
+ 429              	.LFE33:
+ 431              		.section	.text._Z13LcdGotoXYFonthh,"ax",%progbits
+ 432              		.align	2
+ 433              		.global	_Z13LcdGotoXYFonthh
+ 434              		.thumb
+ 435              		.thumb_func
+ 437              	_Z13LcdGotoXYFonthh:
+ 438              	.LFB34:
+ 196:../src/lcd.cpp **** 
+ 197:../src/lcd.cpp **** /*
+ 198:../src/lcd.cpp ****  * Name         :  LcdGotoXYFont
+ 199:../src/lcd.cpp ****  * Description  :  Sets cursor location to xy location corresponding to basic
+ 200:../src/lcd.cpp ****  *                 font size.
+ 201:../src/lcd.cpp ****  * Argument(s)  :  x, y -> Coordinate for new cursor position. Range: 1,1 .. 14,6
+ 202:../src/lcd.cpp ****  * Return value :  see return value in lcd.h
+ 203:../src/lcd.cpp ****  * Note         :  Based on Sylvain Bissonette's code
+ 204:../src/lcd.cpp ****  */
+ 205:../src/lcd.cpp **** byte LcdGotoXYFont ( byte x, byte y )
+ 206:../src/lcd.cpp **** {
+ 439              		.loc 1 206 0
+ 440              		.cfi_startproc
+ 441              		@ args = 0, pretend = 0, frame = 8
+ 442              		@ frame_needed = 1, uses_anonymous_args = 0
+ 443              		@ link register save eliminated.
+ 444 0000 80B4     		push	{r7}
+ 445              	.LCFI8:
+ 446              		.cfi_def_cfa_offset 4
+ 447              		.cfi_offset 7, -4
+ 448 0002 83B0     		sub	sp, sp, #12
+ 449              	.LCFI9:
+ 450              		.cfi_def_cfa_offset 16
+ 451 0004 00AF     		add	r7, sp, #0
+ 452              	.LCFI10:
+ 453              		.cfi_def_cfa_register 7
+ 454 0006 0246     		mov	r2, r0
+ 455 0008 0B46     		mov	r3, r1
+ 456 000a FA71     		strb	r2, [r7, #7]
+ 457 000c BB71     		strb	r3, [r7, #6]
+ 207:../src/lcd.cpp ****     /* Boundary check, slow down the speed but will guarantee this code wont fail */
+ 208:../src/lcd.cpp ****     /* Version 0.2.5 - Fixed on Dec 25, 2008 (XMAS) */
+ 209:../src/lcd.cpp **** 	//TODO parametrize
+ 210:../src/lcd.cpp ****     if( x > 14)
+ 458              		.loc 1 210 0
+ 459 000e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 460 0010 0E2B     		cmp	r3, #14
+ 461 0012 02D9     		bls	.L5
+ 211:../src/lcd.cpp ****         return OUT_OF_BORDER;
+ 462              		.loc 1 211 0
+ 463 0014 4FF00103 		mov	r3, #1
+ 464 0018 1CE0     		b	.L6
+ 465              	.L5:
+ 212:../src/lcd.cpp ****     if( y > 6)
+ 466              		.loc 1 212 0
+ 467 001a BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 468 001c 062B     		cmp	r3, #6
+ 469 001e 02D9     		bls	.L7
+ 213:../src/lcd.cpp ****         return OUT_OF_BORDER;
+ 470              		.loc 1 213 0
+ 471 0020 4FF00103 		mov	r3, #1
+ 472 0024 16E0     		b	.L6
+ 473              	.L7:
+ 214:../src/lcd.cpp ****     /*  Calculate index. It is defined as address within 1024 bytes memory */
+ 215:../src/lcd.cpp **** 
+ 216:../src/lcd.cpp ****     LcdCacheIdx = ( x - 1 ) * 6 + ( y - 1 ) * LCD_X_RES;
+ 474              		.loc 1 216 0
+ 475 0026 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 476 0028 03F1FF32 		add	r2, r3, #-1
+ 477 002c 1346     		mov	r3, r2
+ 478 002e 4FEA4303 		lsl	r3, r3, #1
+ 479 0032 9B18     		adds	r3, r3, r2
+ 480 0034 4FEA4303 		lsl	r3, r3, #1
+ 481 0038 1A46     		mov	r2, r3
+ 482 003a BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 483 003c 03F1FF33 		add	r3, r3, #-1
+ 484 0040 4FEAC313 		lsl	r3, r3, #7
+ 485 0044 D218     		adds	r2, r2, r3
+ 486 0046 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 487 004a C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 488 004e 1A60     		str	r2, [r3, #0]
+ 217:../src/lcd.cpp ****     return OK;
+ 489              		.loc 1 217 0
+ 490 0050 4FF00003 		mov	r3, #0
+ 491              	.L6:
+ 218:../src/lcd.cpp **** }
+ 492              		.loc 1 218 0
+ 493 0054 1846     		mov	r0, r3
+ 494 0056 07F10C07 		add	r7, r7, #12
+ 495 005a BD46     		mov	sp, r7
+ 496 005c 80BC     		pop	{r7}
+ 497 005e 7047     		bx	lr
+ 498              		.cfi_endproc
+ 499              	.LFE34:
+ 501              		.section	.text._Z6LcdChr11LcdFontSizeh,"ax",%progbits
+ 502              		.align	2
+ 503              		.global	_Z6LcdChr11LcdFontSizeh
+ 504              		.thumb
+ 505              		.thumb_func
+ 507              	_Z6LcdChr11LcdFontSizeh:
+ 508              	.LFB35:
+ 219:../src/lcd.cpp **** 
+ 220:../src/lcd.cpp **** /*
+ 221:../src/lcd.cpp ****  * Name         :  LcdChr
+ 222:../src/lcd.cpp ****  * Description  :  Displays a character at current cursor location and
+ 223:../src/lcd.cpp ****  *                 increment cursor location.
+ 224:../src/lcd.cpp ****  * Argument(s)  :  size -> Font size. See enum in lcd.h.
+ 225:../src/lcd.cpp ****  *                 ch   -> Character to write.
+ 226:../src/lcd.cpp ****  * Return value :  see lcd.h about return value
+ 227:../src/lcd.cpp ****  */
+ 228:../src/lcd.cpp **** byte LcdChr ( LcdFontSize size, byte ch )
+ 229:../src/lcd.cpp **** {
+ 509              		.loc 1 229 0
+ 510              		.cfi_startproc
+ 511              		@ args = 0, pretend = 0, frame = 24
+ 512              		@ frame_needed = 1, uses_anonymous_args = 0
+ 513              		@ link register save eliminated.
+ 514 0000 90B4     		push	{r4, r7}
+ 515              	.LCFI11:
+ 516              		.cfi_def_cfa_offset 8
+ 517              		.cfi_offset 7, -4
+ 518              		.cfi_offset 4, -8
+ 519 0002 86B0     		sub	sp, sp, #24
+ 520              	.LCFI12:
+ 521              		.cfi_def_cfa_offset 32
+ 522 0004 00AF     		add	r7, sp, #0
+ 523              	.LCFI13:
+ 524              		.cfi_def_cfa_register 7
+ 525 0006 0246     		mov	r2, r0
+ 526 0008 0B46     		mov	r3, r1
+ 527 000a FA71     		strb	r2, [r7, #7]
+ 528 000c BB71     		strb	r3, [r7, #6]
+ 529              	.LBB3:
+ 230:../src/lcd.cpp ****     byte i, c;
+ 231:../src/lcd.cpp ****     byte b1, b2;
+ 232:../src/lcd.cpp ****     int  tmpIdx;
+ 233:../src/lcd.cpp **** 
+ 234:../src/lcd.cpp ****     if ( LcdCacheIdx < LoWaterMark )
+ 530              		.loc 1 234 0
+ 531 000e 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 532 0012 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 533 0016 1A68     		ldr	r2, [r3, #0]
+ 534 0018 40F20003 		movw	r3, #:lower16:LoWaterMark
+ 535 001c C0F20003 		movt	r3, #:upper16:LoWaterMark
+ 536 0020 1B68     		ldr	r3, [r3, #0]
+ 537 0022 9A42     		cmp	r2, r3
+ 538 0024 09DA     		bge	.L9
+ 235:../src/lcd.cpp ****     {
+ 236:../src/lcd.cpp ****         /* Update low marker. */
+ 237:../src/lcd.cpp ****         LoWaterMark = LcdCacheIdx;
+ 539              		.loc 1 237 0
+ 540 0026 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 541 002a C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 542 002e 1A68     		ldr	r2, [r3, #0]
+ 543 0030 40F20003 		movw	r3, #:lower16:LoWaterMark
+ 544 0034 C0F20003 		movt	r3, #:upper16:LoWaterMark
+ 545 0038 1A60     		str	r2, [r3, #0]
+ 546              	.L9:
+ 238:../src/lcd.cpp ****     }
+ 239:../src/lcd.cpp **** 
+ 240:../src/lcd.cpp ****     if ( (ch < 0x20) || (ch > 0x7b) )
+ 547              		.loc 1 240 0
+ 548 003a BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 549 003c 1F2B     		cmp	r3, #31
+ 550 003e 02D9     		bls	.L10
+ 551              		.loc 1 240 0 is_stmt 0 discriminator 1
+ 552 0040 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 553 0042 7B2B     		cmp	r3, #123
+ 554 0044 02D9     		bls	.L11
+ 555              	.L10:
+ 241:../src/lcd.cpp ****     {
+ 242:../src/lcd.cpp ****         /* Convert to a printable character. */
+ 243:../src/lcd.cpp ****         ch = 92;
+ 556              		.loc 1 243 0 is_stmt 1
+ 557 0046 4FF05C03 		mov	r3, #92
+ 558 004a BB71     		strb	r3, [r7, #6]
+ 559              	.L11:
+ 244:../src/lcd.cpp ****     }
+ 245:../src/lcd.cpp **** 
+ 246:../src/lcd.cpp ****     if ( size == FONT_1X )
+ 560              		.loc 1 246 0
+ 561 004c FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 562 004e 012B     		cmp	r3, #1
+ 563 0050 33D1     		bne	.L12
+ 247:../src/lcd.cpp ****     {
+ 248:../src/lcd.cpp ****         for ( i = 0; i < 5; i++ )
+ 564              		.loc 1 248 0
+ 565 0052 4FF00003 		mov	r3, #0
+ 566 0056 FB75     		strb	r3, [r7, #23]
+ 567 0058 26E0     		b	.L13
+ 568              	.L14:
+ 249:../src/lcd.cpp ****         {
+ 250:../src/lcd.cpp ****             /* Copy lookup table from Flash ROM to LcdCache */
+ 251:../src/lcd.cpp ****             LcdCache[LcdCacheIdx++] = (byte)(FontLookup[ ch - 32 ][ i ] << 1);
+ 569              		.loc 1 251 0 discriminator 2
+ 570 005a 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 571 005e C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 572 0062 1968     		ldr	r1, [r3, #0]
+ 573 0064 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 574 0066 A3F12000 		sub	r0, r3, #32
+ 575 006a FC7D     		ldrb	r4, [r7, #23]	@ zero_extendqisi2
+ 576 006c 40F20002 		movw	r2, #:lower16:_ZL10FontLookup
+ 577 0070 C0F20002 		movt	r2, #:upper16:_ZL10FontLookup
+ 578 0074 0346     		mov	r3, r0
+ 579 0076 4FEA8303 		lsl	r3, r3, #2
+ 580 007a 1B18     		adds	r3, r3, r0
+ 581 007c 1B19     		adds	r3, r3, r4
+ 582 007e D318     		adds	r3, r2, r3
+ 583 0080 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 584 0082 4FEA4303 		lsl	r3, r3, #1
+ 585 0086 DAB2     		uxtb	r2, r3
+ 586 0088 40F20003 		movw	r3, #:lower16:LcdCache
+ 587 008c C0F20003 		movt	r3, #:upper16:LcdCache
+ 588 0090 5A54     		strb	r2, [r3, r1]
+ 589 0092 01F10102 		add	r2, r1, #1
+ 590 0096 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 591 009a C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 592 009e 1A60     		str	r2, [r3, #0]
+ 248:../src/lcd.cpp ****         for ( i = 0; i < 5; i++ )
+ 593              		.loc 1 248 0 discriminator 2
+ 594 00a0 FB7D     		ldrb	r3, [r7, #23]
+ 595 00a2 03F10103 		add	r3, r3, #1
+ 596 00a6 FB75     		strb	r3, [r7, #23]
+ 597              	.L13:
+ 248:../src/lcd.cpp ****         for ( i = 0; i < 5; i++ )
+ 598              		.loc 1 248 0 is_stmt 0 discriminator 1
+ 599 00a8 FB7D     		ldrb	r3, [r7, #23]	@ zero_extendqisi2
+ 600 00aa 042B     		cmp	r3, #4
+ 601 00ac 8CBF     		ite	hi
+ 602 00ae 0023     		movhi	r3, #0
+ 603 00b0 0123     		movls	r3, #1
+ 604 00b2 DBB2     		uxtb	r3, r3
+ 605 00b4 002B     		cmp	r3, #0
+ 606 00b6 D0D1     		bne	.L14
+ 248:../src/lcd.cpp ****         for ( i = 0; i < 5; i++ )
+ 607              		.loc 1 248 0
+ 608 00b8 FEE0     		b	.L15
+ 609              	.L12:
+ 252:../src/lcd.cpp ****         }
+ 253:../src/lcd.cpp ****     }
+ 254:../src/lcd.cpp ****     else if ( size == FONT_2X )
+ 610              		.loc 1 254 0 is_stmt 1
+ 611 00ba FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 612 00bc 022B     		cmp	r3, #2
+ 613 00be 40F0FB80 		bne	.L15
+ 255:../src/lcd.cpp ****     {
+ 256:../src/lcd.cpp ****         tmpIdx = LcdCacheIdx - 84;
+ 614              		.loc 1 256 0
+ 615 00c2 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 616 00c6 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 617 00ca 1B68     		ldr	r3, [r3, #0]
+ 618 00cc A3F15403 		sub	r3, r3, #84
+ 619 00d0 3B61     		str	r3, [r7, #16]
+ 257:../src/lcd.cpp **** 
+ 258:../src/lcd.cpp ****         if ( tmpIdx < LoWaterMark )
+ 620              		.loc 1 258 0
+ 621 00d2 40F20003 		movw	r3, #:lower16:LoWaterMark
+ 622 00d6 C0F20003 		movt	r3, #:upper16:LoWaterMark
+ 623 00da 1B68     		ldr	r3, [r3, #0]
+ 624 00dc 3A69     		ldr	r2, [r7, #16]
+ 625 00de 9A42     		cmp	r2, r3
+ 626 00e0 05DA     		bge	.L16
+ 259:../src/lcd.cpp ****         {
+ 260:../src/lcd.cpp ****             LoWaterMark = tmpIdx;
+ 627              		.loc 1 260 0
+ 628 00e2 40F20003 		movw	r3, #:lower16:LoWaterMark
+ 629 00e6 C0F20003 		movt	r3, #:upper16:LoWaterMark
+ 630 00ea 3A69     		ldr	r2, [r7, #16]
+ 631 00ec 1A60     		str	r2, [r3, #0]
+ 632              	.L16:
+ 261:../src/lcd.cpp ****         }
+ 262:../src/lcd.cpp **** 
+ 263:../src/lcd.cpp ****         if ( tmpIdx < 0 ) return OUT_OF_BORDER;
+ 633              		.loc 1 263 0
+ 634 00ee 3B69     		ldr	r3, [r7, #16]
+ 635 00f0 002B     		cmp	r3, #0
+ 636 00f2 02DA     		bge	.L17
+ 637              		.loc 1 263 0 is_stmt 0 discriminator 1
+ 638 00f4 4FF00103 		mov	r3, #1
+ 639 00f8 21E1     		b	.L18
+ 640              	.L17:
+ 264:../src/lcd.cpp **** 
+ 265:../src/lcd.cpp ****         for ( i = 0; i < 5; i++ )
+ 641              		.loc 1 265 0 is_stmt 1
+ 642 00fa 4FF00003 		mov	r3, #0
+ 643 00fe FB75     		strb	r3, [r7, #23]
+ 644 0100 B5E0     		b	.L19
+ 645              	.L20:
+ 266:../src/lcd.cpp ****         {
+ 267:../src/lcd.cpp ****             /* Copy lookup table from Flash ROM to temporary c */
+ 268:../src/lcd.cpp ****             c = FontLookup[ch - 32][i] << 1;
+ 646              		.loc 1 268 0 discriminator 2
+ 647 0102 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 648 0104 A3F12001 		sub	r1, r3, #32
+ 649 0108 F87D     		ldrb	r0, [r7, #23]	@ zero_extendqisi2
+ 650 010a 40F20002 		movw	r2, #:lower16:_ZL10FontLookup
+ 651 010e C0F20002 		movt	r2, #:upper16:_ZL10FontLookup
+ 652 0112 0B46     		mov	r3, r1
+ 653 0114 4FEA8303 		lsl	r3, r3, #2
+ 654 0118 5B18     		adds	r3, r3, r1
+ 655 011a 1B18     		adds	r3, r3, r0
+ 656 011c D318     		adds	r3, r2, r3
+ 657 011e 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 658 0120 4FEA4303 		lsl	r3, r3, #1
+ 659 0124 FB73     		strb	r3, [r7, #15]
+ 269:../src/lcd.cpp ****             /* Enlarge image */
+ 270:../src/lcd.cpp ****             /* First part */
+ 271:../src/lcd.cpp ****             b1 =  (c & 0x01) * 3;
+ 660              		.loc 1 271 0 discriminator 2
+ 661 0126 FB7B     		ldrb	r3, [r7, #15]
+ 662 0128 03F00103 		and	r3, r3, #1
+ 663 012c DBB2     		uxtb	r3, r3
+ 664 012e 1A46     		mov	r2, r3
+ 665 0130 4FEA4202 		lsl	r2, r2, #1
+ 666 0134 D318     		adds	r3, r2, r3
+ 667 0136 BB73     		strb	r3, [r7, #14]
+ 272:../src/lcd.cpp ****             b1 |= (c & 0x02) * 6;
+ 668              		.loc 1 272 0 discriminator 2
+ 669 0138 FB7B     		ldrb	r3, [r7, #15]
+ 670 013a 03F00203 		and	r3, r3, #2
+ 671 013e DBB2     		uxtb	r3, r3
+ 672 0140 1A46     		mov	r2, r3
+ 673 0142 4FEA4202 		lsl	r2, r2, #1
+ 674 0146 D318     		adds	r3, r2, r3
+ 675 0148 4FEA4303 		lsl	r3, r3, #1
+ 676 014c DBB2     		uxtb	r3, r3
+ 677 014e DAB2     		uxtb	r2, r3
+ 678 0150 BB7B     		ldrb	r3, [r7, #14]	@ zero_extendqisi2
+ 679 0152 1343     		orrs	r3, r3, r2
+ 680 0154 DBB2     		uxtb	r3, r3
+ 681 0156 BB73     		strb	r3, [r7, #14]
+ 273:../src/lcd.cpp ****             b1 |= (c & 0x04) * 12;
+ 682              		.loc 1 273 0 discriminator 2
+ 683 0158 FB7B     		ldrb	r3, [r7, #15]
+ 684 015a 03F00403 		and	r3, r3, #4
+ 685 015e DBB2     		uxtb	r3, r3
+ 686 0160 1A46     		mov	r2, r3
+ 687 0162 4FEA4202 		lsl	r2, r2, #1
+ 688 0166 D318     		adds	r3, r2, r3
+ 689 0168 4FEA8303 		lsl	r3, r3, #2
+ 690 016c DBB2     		uxtb	r3, r3
+ 691 016e DAB2     		uxtb	r2, r3
+ 692 0170 BB7B     		ldrb	r3, [r7, #14]	@ zero_extendqisi2
+ 693 0172 1343     		orrs	r3, r3, r2
+ 694 0174 DBB2     		uxtb	r3, r3
+ 695 0176 BB73     		strb	r3, [r7, #14]
+ 274:../src/lcd.cpp ****             b1 |= (c & 0x08) * 24;
+ 696              		.loc 1 274 0 discriminator 2
+ 697 0178 FB7B     		ldrb	r3, [r7, #15]
+ 698 017a 03F00803 		and	r3, r3, #8
+ 699 017e DBB2     		uxtb	r3, r3
+ 700 0180 1A46     		mov	r2, r3
+ 701 0182 4FEA4202 		lsl	r2, r2, #1
+ 702 0186 D318     		adds	r3, r2, r3
+ 703 0188 4FEAC303 		lsl	r3, r3, #3
+ 704 018c DBB2     		uxtb	r3, r3
+ 705 018e DAB2     		uxtb	r2, r3
+ 706 0190 BB7B     		ldrb	r3, [r7, #14]	@ zero_extendqisi2
+ 707 0192 1343     		orrs	r3, r3, r2
+ 708 0194 DBB2     		uxtb	r3, r3
+ 709 0196 BB73     		strb	r3, [r7, #14]
+ 275:../src/lcd.cpp **** 
+ 276:../src/lcd.cpp ****             c >>= 4;
+ 710              		.loc 1 276 0 discriminator 2
+ 711 0198 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 712 019a 4FEA2313 		asr	r3, r3, #4
+ 713 019e FB73     		strb	r3, [r7, #15]
+ 277:../src/lcd.cpp ****             /* Second part */
+ 278:../src/lcd.cpp ****             b2 =  (c & 0x01) * 3;
+ 714              		.loc 1 278 0 discriminator 2
+ 715 01a0 FB7B     		ldrb	r3, [r7, #15]
+ 716 01a2 03F00103 		and	r3, r3, #1
+ 717 01a6 DBB2     		uxtb	r3, r3
+ 718 01a8 1A46     		mov	r2, r3
+ 719 01aa 4FEA4202 		lsl	r2, r2, #1
+ 720 01ae D318     		adds	r3, r2, r3
+ 721 01b0 7B73     		strb	r3, [r7, #13]
+ 279:../src/lcd.cpp ****             b2 |= (c & 0x02) * 6;
+ 722              		.loc 1 279 0 discriminator 2
+ 723 01b2 FB7B     		ldrb	r3, [r7, #15]
+ 724 01b4 03F00203 		and	r3, r3, #2
+ 725 01b8 DBB2     		uxtb	r3, r3
+ 726 01ba 1A46     		mov	r2, r3
+ 727 01bc 4FEA4202 		lsl	r2, r2, #1
+ 728 01c0 D318     		adds	r3, r2, r3
+ 729 01c2 4FEA4303 		lsl	r3, r3, #1
+ 730 01c6 DBB2     		uxtb	r3, r3
+ 731 01c8 DAB2     		uxtb	r2, r3
+ 732 01ca 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 733 01cc 1343     		orrs	r3, r3, r2
+ 734 01ce DBB2     		uxtb	r3, r3
+ 735 01d0 7B73     		strb	r3, [r7, #13]
+ 280:../src/lcd.cpp ****             b2 |= (c & 0x04) * 12;
+ 736              		.loc 1 280 0 discriminator 2
+ 737 01d2 FB7B     		ldrb	r3, [r7, #15]
+ 738 01d4 03F00403 		and	r3, r3, #4
+ 739 01d8 DBB2     		uxtb	r3, r3
+ 740 01da 1A46     		mov	r2, r3
+ 741 01dc 4FEA4202 		lsl	r2, r2, #1
+ 742 01e0 D318     		adds	r3, r2, r3
+ 743 01e2 4FEA8303 		lsl	r3, r3, #2
+ 744 01e6 DBB2     		uxtb	r3, r3
+ 745 01e8 DAB2     		uxtb	r2, r3
+ 746 01ea 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 747 01ec 1343     		orrs	r3, r3, r2
+ 748 01ee DBB2     		uxtb	r3, r3
+ 749 01f0 7B73     		strb	r3, [r7, #13]
+ 281:../src/lcd.cpp ****             b2 |= (c & 0x08) * 24;
+ 750              		.loc 1 281 0 discriminator 2
+ 751 01f2 FB7B     		ldrb	r3, [r7, #15]
+ 752 01f4 03F00803 		and	r3, r3, #8
+ 753 01f8 DBB2     		uxtb	r3, r3
+ 754 01fa 1A46     		mov	r2, r3
+ 755 01fc 4FEA4202 		lsl	r2, r2, #1
+ 756 0200 D318     		adds	r3, r2, r3
+ 757 0202 4FEAC303 		lsl	r3, r3, #3
+ 758 0206 DBB2     		uxtb	r3, r3
+ 759 0208 DAB2     		uxtb	r2, r3
+ 760 020a 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 761 020c 1343     		orrs	r3, r3, r2
+ 762 020e DBB2     		uxtb	r3, r3
+ 763 0210 7B73     		strb	r3, [r7, #13]
+ 282:../src/lcd.cpp **** 
+ 283:../src/lcd.cpp ****             /* Copy two parts into LcdCache */
+ 284:../src/lcd.cpp ****             LcdCache[tmpIdx++] = b1;
+ 764              		.loc 1 284 0 discriminator 2
+ 765 0212 40F20003 		movw	r3, #:lower16:LcdCache
+ 766 0216 C0F20003 		movt	r3, #:upper16:LcdCache
+ 767 021a 3A69     		ldr	r2, [r7, #16]
+ 768 021c 9B18     		adds	r3, r3, r2
+ 769 021e BA7B     		ldrb	r2, [r7, #14]
+ 770 0220 1A70     		strb	r2, [r3, #0]
+ 771 0222 3B69     		ldr	r3, [r7, #16]
+ 772 0224 03F10103 		add	r3, r3, #1
+ 773 0228 3B61     		str	r3, [r7, #16]
+ 285:../src/lcd.cpp ****             LcdCache[tmpIdx++] = b1;
+ 774              		.loc 1 285 0 discriminator 2
+ 775 022a 40F20003 		movw	r3, #:lower16:LcdCache
+ 776 022e C0F20003 		movt	r3, #:upper16:LcdCache
+ 777 0232 3A69     		ldr	r2, [r7, #16]
+ 778 0234 9B18     		adds	r3, r3, r2
+ 779 0236 BA7B     		ldrb	r2, [r7, #14]
+ 780 0238 1A70     		strb	r2, [r3, #0]
+ 781 023a 3B69     		ldr	r3, [r7, #16]
+ 782 023c 03F10103 		add	r3, r3, #1
+ 783 0240 3B61     		str	r3, [r7, #16]
+ 286:../src/lcd.cpp ****             LcdCache[tmpIdx + 82] = b2;
+ 784              		.loc 1 286 0 discriminator 2
+ 785 0242 3B69     		ldr	r3, [r7, #16]
+ 786 0244 03F15202 		add	r2, r3, #82
+ 787 0248 40F20003 		movw	r3, #:lower16:LcdCache
+ 788 024c C0F20003 		movt	r3, #:upper16:LcdCache
+ 789 0250 797B     		ldrb	r1, [r7, #13]
+ 790 0252 9954     		strb	r1, [r3, r2]
+ 287:../src/lcd.cpp ****             LcdCache[tmpIdx + 83] = b2;
+ 791              		.loc 1 287 0 discriminator 2
+ 792 0254 3B69     		ldr	r3, [r7, #16]
+ 793 0256 03F15302 		add	r2, r3, #83
+ 794 025a 40F20003 		movw	r3, #:lower16:LcdCache
+ 795 025e C0F20003 		movt	r3, #:upper16:LcdCache
+ 796 0262 797B     		ldrb	r1, [r7, #13]
+ 797 0264 9954     		strb	r1, [r3, r2]
+ 265:../src/lcd.cpp ****         for ( i = 0; i < 5; i++ )
+ 798              		.loc 1 265 0 discriminator 2
+ 799 0266 FB7D     		ldrb	r3, [r7, #23]
+ 800 0268 03F10103 		add	r3, r3, #1
+ 801 026c FB75     		strb	r3, [r7, #23]
+ 802              	.L19:
+ 265:../src/lcd.cpp ****         for ( i = 0; i < 5; i++ )
+ 803              		.loc 1 265 0 is_stmt 0 discriminator 1
+ 804 026e FB7D     		ldrb	r3, [r7, #23]	@ zero_extendqisi2
+ 805 0270 042B     		cmp	r3, #4
+ 806 0272 8CBF     		ite	hi
+ 807 0274 0023     		movhi	r3, #0
+ 808 0276 0123     		movls	r3, #1
+ 809 0278 DBB2     		uxtb	r3, r3
+ 810 027a 002B     		cmp	r3, #0
+ 811 027c 7FF441AF 		bne	.L20
+ 288:../src/lcd.cpp ****         }
+ 289:../src/lcd.cpp **** 
+ 290:../src/lcd.cpp ****         /* Update x cursor position. */
+ 291:../src/lcd.cpp ****         /* Version 0.2.5 - Possible bug fixed on Dec 25,2008 */
+ 292:../src/lcd.cpp ****         LcdCacheIdx = (LcdCacheIdx + 11) % LCD_CACHE_SIZE;
+ 812              		.loc 1 292 0 is_stmt 1
+ 813 0280 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 814 0284 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 815 0288 1B68     		ldr	r3, [r3, #0]
+ 816 028a 03F10B02 		add	r2, r3, #11
+ 817 028e 40F2FF33 		movw	r3, #1023
+ 818 0292 C8F20003 		movt	r3, 32768
+ 819 0296 1340     		ands	r3, r3, r2
+ 820 0298 002B     		cmp	r3, #0
+ 821 029a 07DA     		bge	.L21
+ 822 029c 03F1FF33 		add	r3, r3, #-1
+ 823 02a0 6FEA8353 		mvn	r3, r3, lsl #22
+ 824 02a4 6FEA9353 		mvn	r3, r3, lsr #22
+ 825 02a8 03F10103 		add	r3, r3, #1
+ 826              	.L21:
+ 827 02ac 1A46     		mov	r2, r3
+ 828 02ae 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 829 02b2 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 830 02b6 1A60     		str	r2, [r3, #0]
+ 831              	.L15:
+ 293:../src/lcd.cpp ****     }
+ 294:../src/lcd.cpp **** 
+ 295:../src/lcd.cpp ****     if ( LcdCacheIdx > HiWaterMark )
+ 832              		.loc 1 295 0
+ 833 02b8 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 834 02bc C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 835 02c0 1A68     		ldr	r2, [r3, #0]
+ 836 02c2 40F20003 		movw	r3, #:lower16:HiWaterMark
+ 837 02c6 C0F20003 		movt	r3, #:upper16:HiWaterMark
+ 838 02ca 1B68     		ldr	r3, [r3, #0]
+ 839 02cc 9A42     		cmp	r2, r3
+ 840 02ce 09DD     		ble	.L22
+ 296:../src/lcd.cpp ****     {
+ 297:../src/lcd.cpp ****         /* Update high marker. */
+ 298:../src/lcd.cpp ****         HiWaterMark = LcdCacheIdx;
+ 841              		.loc 1 298 0
+ 842 02d0 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 843 02d4 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 844 02d8 1A68     		ldr	r2, [r3, #0]
+ 845 02da 40F20003 		movw	r3, #:lower16:HiWaterMark
+ 846 02de C0F20003 		movt	r3, #:upper16:HiWaterMark
+ 847 02e2 1A60     		str	r2, [r3, #0]
+ 848              	.L22:
+ 299:../src/lcd.cpp ****     }
+ 300:../src/lcd.cpp **** 
+ 301:../src/lcd.cpp ****     /* Horizontal gap between characters. */
+ 302:../src/lcd.cpp ****     /* Version 0.2.5 - Possible bug fixed on Dec 25,2008 */
+ 303:../src/lcd.cpp ****     LcdCache[LcdCacheIdx] = 0x00;
+ 849              		.loc 1 303 0
+ 850 02e4 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 851 02e8 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 852 02ec 1A68     		ldr	r2, [r3, #0]
+ 853 02ee 40F20003 		movw	r3, #:lower16:LcdCache
+ 854 02f2 C0F20003 		movt	r3, #:upper16:LcdCache
+ 855 02f6 4FF00001 		mov	r1, #0
+ 856 02fa 9954     		strb	r1, [r3, r2]
+ 304:../src/lcd.cpp ****     /* At index number LCD_CACHE_SIZE - 1, wrap to 0 */
+ 305:../src/lcd.cpp ****     if(LcdCacheIdx == (LCD_CACHE_SIZE - 1) )
+ 857              		.loc 1 305 0
+ 858 02fc 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 859 0300 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 860 0304 1A68     		ldr	r2, [r3, #0]
+ 861 0306 40F2FF33 		movw	r3, #1023
+ 862 030a 9A42     		cmp	r2, r3
+ 863 030c 09D1     		bne	.L23
+ 306:../src/lcd.cpp ****     {
+ 307:../src/lcd.cpp ****         LcdCacheIdx = 0;
+ 864              		.loc 1 307 0
+ 865 030e 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 866 0312 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 867 0316 4FF00002 		mov	r2, #0
+ 868 031a 1A60     		str	r2, [r3, #0]
+ 308:../src/lcd.cpp ****         return OK_WITH_WRAP;
+ 869              		.loc 1 308 0
+ 870 031c 4FF00203 		mov	r3, #2
+ 871 0320 0DE0     		b	.L18
+ 872              	.L23:
+ 309:../src/lcd.cpp ****     }
+ 310:../src/lcd.cpp ****     /* Otherwise just increment the index */
+ 311:../src/lcd.cpp ****     LcdCacheIdx++;
+ 873              		.loc 1 311 0
+ 874 0322 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 875 0326 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 876 032a 1B68     		ldr	r3, [r3, #0]
+ 877 032c 03F10102 		add	r2, r3, #1
+ 878 0330 40F20003 		movw	r3, #:lower16:LcdCacheIdx
+ 879 0334 C0F20003 		movt	r3, #:upper16:LcdCacheIdx
+ 880 0338 1A60     		str	r2, [r3, #0]
+ 312:../src/lcd.cpp ****     return OK;
+ 881              		.loc 1 312 0
+ 882 033a 4FF00003 		mov	r3, #0
+ 883              	.L18:
+ 884              	.LBE3:
+ 313:../src/lcd.cpp **** }
+ 885              		.loc 1 313 0
+ 886 033e 1846     		mov	r0, r3
+ 887 0340 07F11807 		add	r7, r7, #24
+ 888 0344 BD46     		mov	sp, r7
+ 889 0346 90BC     		pop	{r4, r7}
+ 890 0348 7047     		bx	lr
+ 891              		.cfi_endproc
+ 892              	.LFE35:
+ 894 034a 00BF     		.section	.text._Z6LcdStr11LcdFontSizePKh,"ax",%progbits
+ 895              		.align	2
+ 896              		.global	_Z6LcdStr11LcdFontSizePKh
+ 897              		.thumb
+ 898              		.thumb_func
+ 900              	_Z6LcdStr11LcdFontSizePKh:
+ 901              	.LFB36:
+ 314:../src/lcd.cpp **** 
+ 315:../src/lcd.cpp **** /*
+ 316:../src/lcd.cpp ****  * Name         :  LcdStr
+ 317:../src/lcd.cpp ****  * Description  :  Displays a character at current cursor location and increment
+ 318:../src/lcd.cpp ****  *                 cursor location according to font size. This function is
+ 319:../src/lcd.cpp ****  *                 dedicated to print string laid in SRAM
+ 320:../src/lcd.cpp ****  * Argument(s)  :  size      -> Font size. See enum.
+ 321:../src/lcd.cpp ****  *                 dataArray -> Array contained string of char to be written
+ 322:../src/lcd.cpp ****  *                              into cache.
+ 323:../src/lcd.cpp ****  * Return value :  see return value on lcd.h
+ 324:../src/lcd.cpp ****  */
+ 325:../src/lcd.cpp **** byte LcdStr ( LcdFontSize size, const byte dataArray[] )
+ 326:../src/lcd.cpp **** {
+ 902              		.loc 1 326 0
+ 903              		.cfi_startproc
+ 904              		@ args = 0, pretend = 0, frame = 16
+ 905              		@ frame_needed = 1, uses_anonymous_args = 0
+ 906 0000 80B5     		push	{r7, lr}
+ 907              	.LCFI14:
+ 908              		.cfi_def_cfa_offset 8
+ 909              		.cfi_offset 14, -4
+ 910              		.cfi_offset 7, -8
+ 911 0002 84B0     		sub	sp, sp, #16
+ 912              	.LCFI15:
+ 913              		.cfi_def_cfa_offset 24
+ 914 0004 00AF     		add	r7, sp, #0
+ 915              	.LCFI16:
+ 916              		.cfi_def_cfa_register 7
+ 917 0006 0346     		mov	r3, r0
+ 918 0008 3960     		str	r1, [r7, #0]
+ 919 000a FB71     		strb	r3, [r7, #7]
+ 920              	.LBB4:
+ 327:../src/lcd.cpp ****     byte tmpIdx=0;
+ 921              		.loc 1 327 0
+ 922 000c 4FF00003 		mov	r3, #0
+ 923 0010 FB73     		strb	r3, [r7, #15]
+ 328:../src/lcd.cpp ****     byte response;
+ 329:../src/lcd.cpp ****     while( dataArray[ tmpIdx ] != '\0' )
+ 924              		.loc 1 329 0
+ 925 0012 14E0     		b	.L25
+ 926              	.L28:
+ 330:../src/lcd.cpp **** 	{
+ 331:../src/lcd.cpp ****         /* Send char */
+ 332:../src/lcd.cpp **** 		response = LcdChr( size, dataArray[ tmpIdx ] );
+ 927              		.loc 1 332 0
+ 928 0014 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 929 0016 3A68     		ldr	r2, [r7, #0]
+ 930 0018 D318     		adds	r3, r2, r3
+ 931 001a 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 932 001c FA79     		ldrb	r2, [r7, #7]	@ zero_extendqisi2
+ 933 001e 1046     		mov	r0, r2
+ 934 0020 1946     		mov	r1, r3
+ 935 0022 FFF7FEFF 		bl	_Z6LcdChr11LcdFontSizeh
+ 936 0026 0346     		mov	r3, r0
+ 937 0028 BB73     		strb	r3, [r7, #14]
+ 333:../src/lcd.cpp ****         /* Just in case OUT_OF_BORDER occured */
+ 334:../src/lcd.cpp ****         /* Dont worry if the signal == OK_WITH_WRAP, the string will
+ 335:../src/lcd.cpp ****         be wrapped to starting point */
+ 336:../src/lcd.cpp ****         if( response == OUT_OF_BORDER)
+ 938              		.loc 1 336 0
+ 939 002a BB7B     		ldrb	r3, [r7, #14]	@ zero_extendqisi2
+ 940 002c 012B     		cmp	r3, #1
+ 941 002e 02D1     		bne	.L26
+ 337:../src/lcd.cpp ****             return OUT_OF_BORDER;
+ 942              		.loc 1 337 0
+ 943 0030 4FF00103 		mov	r3, #1
+ 944 0034 10E0     		b	.L27
+ 945              	.L26:
+ 338:../src/lcd.cpp ****         /* Increase index */
+ 339:../src/lcd.cpp **** 		tmpIdx++;
+ 946              		.loc 1 339 0
+ 947 0036 FB7B     		ldrb	r3, [r7, #15]
+ 948 0038 03F10103 		add	r3, r3, #1
+ 949 003c FB73     		strb	r3, [r7, #15]
+ 950              	.L25:
+ 329:../src/lcd.cpp ****     while( dataArray[ tmpIdx ] != '\0' )
+ 951              		.loc 1 329 0 discriminator 1
+ 952 003e FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 953 0040 3A68     		ldr	r2, [r7, #0]
+ 954 0042 D318     		adds	r3, r2, r3
+ 955 0044 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 956 0046 002B     		cmp	r3, #0
+ 957 0048 0CBF     		ite	eq
+ 958 004a 0023     		moveq	r3, #0
+ 959 004c 0123     		movne	r3, #1
+ 960 004e DBB2     		uxtb	r3, r3
+ 961 0050 002B     		cmp	r3, #0
+ 962 0052 DFD1     		bne	.L28
+ 340:../src/lcd.cpp **** 	}
+ 341:../src/lcd.cpp ****     return OK;
+ 963              		.loc 1 341 0
+ 964 0054 4FF00003 		mov	r3, #0
+ 965              	.L27:
+ 966              	.LBE4:
+ 342:../src/lcd.cpp **** }
+ 967              		.loc 1 342 0
+ 968 0058 1846     		mov	r0, r3
+ 969 005a 07F11007 		add	r7, r7, #16
+ 970 005e BD46     		mov	sp, r7
+ 971 0060 80BD     		pop	{r7, pc}
+ 972              		.cfi_endproc
+ 973              	.LFE36:
+ 975 0062 00BF     		.section	.text._Z8LcdPixelhh12LcdPixelMode,"ax",%progbits
+ 976              		.align	2
+ 977              		.global	_Z8LcdPixelhh12LcdPixelMode
+ 978              		.thumb
+ 979              		.thumb_func
+ 981              	_Z8LcdPixelhh12LcdPixelMode:
+ 982              	.LFB37:
+ 343:../src/lcd.cpp **** 
+ 344:../src/lcd.cpp **** /*
+ 345:../src/lcd.cpp ****  * Name         :  LcdPixel
+ 346:../src/lcd.cpp ****  * Description  :  Displays a pixel at given absolute (x, y) location.
+ 347:../src/lcd.cpp ****  * Argument(s)  :  x, y -> Absolute pixel coordinates
+ 348:../src/lcd.cpp ****  *                 mode -> Off, On or Xor. See enum in lcd.h.
+ 349:../src/lcd.cpp ****  * Return value :  see return value on lcd.h
+ 350:../src/lcd.cpp ****  * Note         :  Based on Sylvain Bissonette's code
+ 351:../src/lcd.cpp ****  */
+ 352:../src/lcd.cpp **** byte LcdPixel ( byte x, byte y, LcdPixelMode mode )
+ 353:../src/lcd.cpp **** {
+ 983              		.loc 1 353 0
+ 984              		.cfi_startproc
+ 985              		@ args = 0, pretend = 0, frame = 16
+ 986              		@ frame_needed = 1, uses_anonymous_args = 0
+ 987              		@ link register save eliminated.
+ 988 0000 80B4     		push	{r7}
+ 989              	.LCFI17:
+ 990              		.cfi_def_cfa_offset 4
+ 991              		.cfi_offset 7, -4
+ 992 0002 85B0     		sub	sp, sp, #20
+ 993              	.LCFI18:
+ 994              		.cfi_def_cfa_offset 24
+ 995 0004 00AF     		add	r7, sp, #0
+ 996              	.LCFI19:
+ 997              		.cfi_def_cfa_register 7
+ 998 0006 1346     		mov	r3, r2
+ 999 0008 0246     		mov	r2, r0
+ 1000 000a FA71     		strb	r2, [r7, #7]
+ 1001 000c 0A46     		mov	r2, r1
+ 1002 000e BA71     		strb	r2, [r7, #6]
+ 1003 0010 7B71     		strb	r3, [r7, #5]
+ 1004              	.LBB5:
+ 354:../src/lcd.cpp ****     word  index;
+ 355:../src/lcd.cpp ****     byte  offset;
+ 356:../src/lcd.cpp ****     byte  data;
+ 357:../src/lcd.cpp **** 
+ 358:../src/lcd.cpp ****     /* Prevent from getting out of border */
+ 359:../src/lcd.cpp ****     if ( x > LCD_X_RES ) return OUT_OF_BORDER;
+ 1005              		.loc 1 359 0
+ 1006 0012 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1007 0014 802B     		cmp	r3, #128
+ 1008 0016 02D9     		bls	.L30
+ 1009              		.loc 1 359 0 is_stmt 0 discriminator 1
+ 1010 0018 4FF00103 		mov	r3, #1
+ 1011 001c 7EE0     		b	.L31
+ 1012              	.L30:
+ 360:../src/lcd.cpp ****     if ( y > LCD_Y_RES ) return OUT_OF_BORDER;
+ 1013              		.loc 1 360 0 is_stmt 1
+ 1014 001e BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1015 0020 402B     		cmp	r3, #64
+ 1016 0022 02D9     		bls	.L32
+ 1017              		.loc 1 360 0 is_stmt 0 discriminator 1
+ 1018 0024 4FF00103 		mov	r3, #1
+ 1019 0028 78E0     		b	.L31
+ 1020              	.L32:
+ 361:../src/lcd.cpp **** 
+ 362:../src/lcd.cpp ****     /* Recalculating index and offset */
+ 363:../src/lcd.cpp ****     index = ( ( y / 8 ) * 84 ) + x;
+ 1021              		.loc 1 363 0 is_stmt 1
+ 1022 002a BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1023 002c 4FEAD303 		lsr	r3, r3, #3
+ 1024 0030 DBB2     		uxtb	r3, r3
+ 1025 0032 1A46     		mov	r2, r3	@ movhi
+ 1026 0034 4FEA4202 		lsl	r2, r2, #1
+ 1027 0038 D318     		adds	r3, r2, r3
+ 1028 003a 1A46     		mov	r2, r3	@ movhi
+ 1029 003c 4FEAC202 		lsl	r2, r2, #3
+ 1030 0040 D31A     		subs	r3, r2, r3
+ 1031 0042 4FEA8303 		lsl	r3, r3, #2
+ 1032 0046 9AB2     		uxth	r2, r3
+ 1033 0048 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1034 004a 9BB2     		uxth	r3, r3
+ 1035 004c D318     		adds	r3, r2, r3
+ 1036 004e BB81     		strh	r3, [r7, #12]	@ movhi
+ 364:../src/lcd.cpp ****     offset  = y - ( ( y / 8 ) * 8 );
+ 1037              		.loc 1 364 0
+ 1038 0050 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1039 0052 4FEAD303 		lsr	r3, r3, #3
+ 1040 0056 DBB2     		uxtb	r3, r3
+ 1041 0058 1A46     		mov	r2, r3
+ 1042 005a 4FEA4212 		lsl	r2, r2, #5
+ 1043 005e D31A     		subs	r3, r2, r3
+ 1044 0060 4FEAC303 		lsl	r3, r3, #3
+ 1045 0064 DAB2     		uxtb	r2, r3
+ 1046 0066 BB79     		ldrb	r3, [r7, #6]
+ 1047 0068 D318     		adds	r3, r2, r3
+ 1048 006a FB72     		strb	r3, [r7, #11]
+ 365:../src/lcd.cpp **** 
+ 366:../src/lcd.cpp ****     data = LcdCache[ index ];
+ 1049              		.loc 1 366 0
+ 1050 006c BA89     		ldrh	r2, [r7, #12]
+ 1051 006e 40F20003 		movw	r3, #:lower16:LcdCache
+ 1052 0072 C0F20003 		movt	r3, #:upper16:LcdCache
+ 1053 0076 9B5C     		ldrb	r3, [r3, r2]
+ 1054 0078 FB73     		strb	r3, [r7, #15]
+ 367:../src/lcd.cpp **** 
+ 368:../src/lcd.cpp ****     /* Bit processing */
+ 369:../src/lcd.cpp **** 
+ 370:../src/lcd.cpp **** 	/* Clear mode */
+ 371:../src/lcd.cpp ****     if ( mode == PIXEL_OFF )
+ 1055              		.loc 1 371 0
+ 1056 007a 7B79     		ldrb	r3, [r7, #5]	@ zero_extendqisi2
+ 1057 007c 002B     		cmp	r3, #0
+ 1058 007e 0DD1     		bne	.L33
+ 372:../src/lcd.cpp ****     {
+ 373:../src/lcd.cpp ****         data &= ( ~( 0x01 << offset ) );
+ 1059              		.loc 1 373 0
+ 1060 0080 FB7A     		ldrb	r3, [r7, #11]	@ zero_extendqisi2
+ 1061 0082 4FF00102 		mov	r2, #1
+ 1062 0086 02FA03F3 		lsl	r3, r2, r3
+ 1063 008a DBB2     		uxtb	r3, r3
+ 1064 008c 6FEA0303 		mvn	r3, r3
+ 1065 0090 DAB2     		uxtb	r2, r3
+ 1066 0092 FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1067 0094 1340     		ands	r3, r3, r2
+ 1068 0096 DBB2     		uxtb	r3, r3
+ 1069 0098 FB73     		strb	r3, [r7, #15]
+ 1070 009a 1AE0     		b	.L34
+ 1071              	.L33:
+ 374:../src/lcd.cpp ****     }
+ 375:../src/lcd.cpp **** 
+ 376:../src/lcd.cpp ****     /* On mode */
+ 377:../src/lcd.cpp ****     else if ( mode == PIXEL_ON )
+ 1072              		.loc 1 377 0
+ 1073 009c 7B79     		ldrb	r3, [r7, #5]	@ zero_extendqisi2
+ 1074 009e 012B     		cmp	r3, #1
+ 1075 00a0 0AD1     		bne	.L35
+ 378:../src/lcd.cpp ****     {
+ 379:../src/lcd.cpp ****         data |= ( 0x01 << offset );
+ 1076              		.loc 1 379 0
+ 1077 00a2 FB7A     		ldrb	r3, [r7, #11]	@ zero_extendqisi2
+ 1078 00a4 4FF00102 		mov	r2, #1
+ 1079 00a8 02FA03F3 		lsl	r3, r2, r3
+ 1080 00ac DAB2     		uxtb	r2, r3
+ 1081 00ae FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1082 00b0 1343     		orrs	r3, r3, r2
+ 1083 00b2 DBB2     		uxtb	r3, r3
+ 1084 00b4 FB73     		strb	r3, [r7, #15]
+ 1085 00b6 0CE0     		b	.L34
+ 1086              	.L35:
+ 380:../src/lcd.cpp ****     }
+ 381:../src/lcd.cpp **** 
+ 382:../src/lcd.cpp ****     /* Xor mode */
+ 383:../src/lcd.cpp ****     else if ( mode  == PIXEL_XOR )
+ 1087              		.loc 1 383 0
+ 1088 00b8 7B79     		ldrb	r3, [r7, #5]	@ zero_extendqisi2
+ 1089 00ba 022B     		cmp	r3, #2
+ 1090 00bc 09D1     		bne	.L34
+ 384:../src/lcd.cpp ****     {
+ 385:../src/lcd.cpp ****         data ^= ( 0x01 << offset );
+ 1091              		.loc 1 385 0
+ 1092 00be FB7A     		ldrb	r3, [r7, #11]	@ zero_extendqisi2
+ 1093 00c0 4FF00102 		mov	r2, #1
+ 1094 00c4 02FA03F3 		lsl	r3, r2, r3
+ 1095 00c8 DAB2     		uxtb	r2, r3
+ 1096 00ca FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1097 00cc 5340     		eors	r3, r3, r2
+ 1098 00ce DBB2     		uxtb	r3, r3
+ 1099 00d0 FB73     		strb	r3, [r7, #15]
+ 1100              	.L34:
+ 386:../src/lcd.cpp ****     }
+ 387:../src/lcd.cpp **** 
+ 388:../src/lcd.cpp ****     /* Final result copied to cache */
+ 389:../src/lcd.cpp ****     LcdCache[ index ] = data;
+ 1101              		.loc 1 389 0
+ 1102 00d2 BA89     		ldrh	r2, [r7, #12]
+ 1103 00d4 40F20003 		movw	r3, #:lower16:LcdCache
+ 1104 00d8 C0F20003 		movt	r3, #:upper16:LcdCache
+ 1105 00dc F97B     		ldrb	r1, [r7, #15]
+ 1106 00de 9954     		strb	r1, [r3, r2]
+ 390:../src/lcd.cpp **** 
+ 391:../src/lcd.cpp ****     if ( index < LoWaterMark )
+ 1107              		.loc 1 391 0
+ 1108 00e0 BA89     		ldrh	r2, [r7, #12]
+ 1109 00e2 40F20003 		movw	r3, #:lower16:LoWaterMark
+ 1110 00e6 C0F20003 		movt	r3, #:upper16:LoWaterMark
+ 1111 00ea 1B68     		ldr	r3, [r3, #0]
+ 1112 00ec 9A42     		cmp	r2, r3
+ 1113 00ee 05DA     		bge	.L36
+ 392:../src/lcd.cpp ****     {
+ 393:../src/lcd.cpp ****         /*  Update low marker. */
+ 394:../src/lcd.cpp ****         LoWaterMark = index;
+ 1114              		.loc 1 394 0
+ 1115 00f0 BA89     		ldrh	r2, [r7, #12]
+ 1116 00f2 40F20003 		movw	r3, #:lower16:LoWaterMark
+ 1117 00f6 C0F20003 		movt	r3, #:upper16:LoWaterMark
+ 1118 00fa 1A60     		str	r2, [r3, #0]
+ 1119              	.L36:
+ 395:../src/lcd.cpp ****     }
+ 396:../src/lcd.cpp **** 
+ 397:../src/lcd.cpp ****     if ( index > HiWaterMark )
+ 1120              		.loc 1 397 0
+ 1121 00fc BA89     		ldrh	r2, [r7, #12]
+ 1122 00fe 40F20003 		movw	r3, #:lower16:HiWaterMark
+ 1123 0102 C0F20003 		movt	r3, #:upper16:HiWaterMark
+ 1124 0106 1B68     		ldr	r3, [r3, #0]
+ 1125 0108 9A42     		cmp	r2, r3
+ 1126 010a 05DD     		ble	.L37
+ 398:../src/lcd.cpp ****     {
+ 399:../src/lcd.cpp ****         /*  Update high marker. */
+ 400:../src/lcd.cpp ****         HiWaterMark = index;
+ 1127              		.loc 1 400 0
+ 1128 010c BA89     		ldrh	r2, [r7, #12]
+ 1129 010e 40F20003 		movw	r3, #:lower16:HiWaterMark
+ 1130 0112 C0F20003 		movt	r3, #:upper16:HiWaterMark
+ 1131 0116 1A60     		str	r2, [r3, #0]
+ 1132              	.L37:
+ 401:../src/lcd.cpp ****     }
+ 402:../src/lcd.cpp ****     return OK;
+ 1133              		.loc 1 402 0
+ 1134 0118 4FF00003 		mov	r3, #0
+ 1135              	.L31:
+ 1136              	.LBE5:
+ 403:../src/lcd.cpp **** }
+ 1137              		.loc 1 403 0
+ 1138 011c 1846     		mov	r0, r3
+ 1139 011e 07F11407 		add	r7, r7, #20
+ 1140 0122 BD46     		mov	sp, r7
+ 1141 0124 80BC     		pop	{r7}
+ 1142 0126 7047     		bx	lr
+ 1143              		.cfi_endproc
+ 1144              	.LFE37:
+ 1146              		.section	.text._Z7LcdLinehhhh12LcdPixelMode,"ax",%progbits
+ 1147              		.align	2
+ 1148              		.global	_Z7LcdLinehhhh12LcdPixelMode
+ 1149              		.thumb
+ 1150              		.thumb_func
+ 1152              	_Z7LcdLinehhhh12LcdPixelMode:
+ 1153              	.LFB38:
+ 404:../src/lcd.cpp **** 
+ 405:../src/lcd.cpp **** /*
+ 406:../src/lcd.cpp ****  * Name         :  LcdLine
+ 407:../src/lcd.cpp ****  * Description  :  Draws a line between two points on the display.
+ 408:../src/lcd.cpp ****  * Argument(s)  :  x1, y1 -> Absolute pixel coordinates for line origin.
+ 409:../src/lcd.cpp ****  *                 x2, y2 -> Absolute pixel coordinates for line end.
+ 410:../src/lcd.cpp ****  *                 mode   -> Off, On or Xor. See enum in lcd.h.
+ 411:../src/lcd.cpp ****  * Return value :  see return value on lcd.h
+ 412:../src/lcd.cpp ****  */
+ 413:../src/lcd.cpp **** byte LcdLine ( byte x1, byte x2, byte y1, byte y2, LcdPixelMode mode )
+ 414:../src/lcd.cpp **** {
+ 1154              		.loc 1 414 0
+ 1155              		.cfi_startproc
+ 1156              		@ args = 4, pretend = 0, frame = 32
+ 1157              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1158 0000 80B5     		push	{r7, lr}
+ 1159              	.LCFI20:
+ 1160              		.cfi_def_cfa_offset 8
+ 1161              		.cfi_offset 14, -4
+ 1162              		.cfi_offset 7, -8
+ 1163 0002 88B0     		sub	sp, sp, #32
+ 1164              	.LCFI21:
+ 1165              		.cfi_def_cfa_offset 40
+ 1166 0004 00AF     		add	r7, sp, #0
+ 1167              	.LCFI22:
+ 1168              		.cfi_def_cfa_register 7
+ 1169 0006 F871     		strb	r0, [r7, #7]
+ 1170 0008 B971     		strb	r1, [r7, #6]
+ 1171 000a 7A71     		strb	r2, [r7, #5]
+ 1172 000c 3B71     		strb	r3, [r7, #4]
+ 1173              	.LBB6:
+ 415:../src/lcd.cpp ****     int dx, dy, stepx, stepy, fraction;
+ 416:../src/lcd.cpp ****     byte response;
+ 417:../src/lcd.cpp **** 
+ 418:../src/lcd.cpp ****     /* Calculate differential form */
+ 419:../src/lcd.cpp ****     /* dy   y2 - y1 */
+ 420:../src/lcd.cpp ****     /* -- = ------- */
+ 421:../src/lcd.cpp ****     /* dx   x2 - x1 */
+ 422:../src/lcd.cpp **** 
+ 423:../src/lcd.cpp ****     /* Take differences */
+ 424:../src/lcd.cpp ****     dy = y2 - y1;
+ 1174              		.loc 1 424 0
+ 1175 000e 3A79     		ldrb	r2, [r7, #4]	@ zero_extendqisi2
+ 1176 0010 7B79     		ldrb	r3, [r7, #5]	@ zero_extendqisi2
+ 1177 0012 D31A     		subs	r3, r2, r3
+ 1178 0014 BB61     		str	r3, [r7, #24]
+ 425:../src/lcd.cpp ****     dx = x2 - x1;
+ 1179              		.loc 1 425 0
+ 1180 0016 BA79     		ldrb	r2, [r7, #6]	@ zero_extendqisi2
+ 1181 0018 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1182 001a D31A     		subs	r3, r2, r3
+ 1183 001c FB61     		str	r3, [r7, #28]
+ 426:../src/lcd.cpp **** 
+ 427:../src/lcd.cpp ****     /* dy is negative */
+ 428:../src/lcd.cpp ****     if ( dy < 0 )
+ 1184              		.loc 1 428 0
+ 1185 001e BB69     		ldr	r3, [r7, #24]
+ 1186 0020 002B     		cmp	r3, #0
+ 1187 0022 07DA     		bge	.L39
+ 429:../src/lcd.cpp ****     {
+ 430:../src/lcd.cpp ****         dy    = -dy;
+ 1188              		.loc 1 430 0
+ 1189 0024 BB69     		ldr	r3, [r7, #24]
+ 1190 0026 C3F10003 		rsb	r3, r3, #0
+ 1191 002a BB61     		str	r3, [r7, #24]
+ 431:../src/lcd.cpp ****         stepy = -1;
+ 1192              		.loc 1 431 0
+ 1193 002c 4FF0FF33 		mov	r3, #-1
+ 1194 0030 3B61     		str	r3, [r7, #16]
+ 1195 0032 02E0     		b	.L40
+ 1196              	.L39:
+ 432:../src/lcd.cpp ****     }
+ 433:../src/lcd.cpp ****     else
+ 434:../src/lcd.cpp ****     {
+ 435:../src/lcd.cpp ****         stepy = 1;
+ 1197              		.loc 1 435 0
+ 1198 0034 4FF00103 		mov	r3, #1
+ 1199 0038 3B61     		str	r3, [r7, #16]
+ 1200              	.L40:
+ 436:../src/lcd.cpp ****     }
+ 437:../src/lcd.cpp **** 
+ 438:../src/lcd.cpp ****     /* dx is negative */
+ 439:../src/lcd.cpp ****     if ( dx < 0 )
+ 1201              		.loc 1 439 0
+ 1202 003a FB69     		ldr	r3, [r7, #28]
+ 1203 003c 002B     		cmp	r3, #0
+ 1204 003e 07DA     		bge	.L41
+ 440:../src/lcd.cpp ****     {
+ 441:../src/lcd.cpp ****         dx    = -dx;
+ 1205              		.loc 1 441 0
+ 1206 0040 FB69     		ldr	r3, [r7, #28]
+ 1207 0042 C3F10003 		rsb	r3, r3, #0
+ 1208 0046 FB61     		str	r3, [r7, #28]
+ 442:../src/lcd.cpp ****         stepx = -1;
+ 1209              		.loc 1 442 0
+ 1210 0048 4FF0FF33 		mov	r3, #-1
+ 1211 004c 7B61     		str	r3, [r7, #20]
+ 1212 004e 02E0     		b	.L42
+ 1213              	.L41:
+ 443:../src/lcd.cpp ****     }
+ 444:../src/lcd.cpp ****     else
+ 445:../src/lcd.cpp ****     {
+ 446:../src/lcd.cpp ****         stepx = 1;
+ 1214              		.loc 1 446 0
+ 1215 0050 4FF00103 		mov	r3, #1
+ 1216 0054 7B61     		str	r3, [r7, #20]
+ 1217              	.L42:
+ 447:../src/lcd.cpp ****     }
+ 448:../src/lcd.cpp **** 
+ 449:../src/lcd.cpp ****     dx <<= 1;
+ 1218              		.loc 1 449 0
+ 1219 0056 FB69     		ldr	r3, [r7, #28]
+ 1220 0058 4FEA4303 		lsl	r3, r3, #1
+ 1221 005c FB61     		str	r3, [r7, #28]
+ 450:../src/lcd.cpp ****     dy <<= 1;
+ 1222              		.loc 1 450 0
+ 1223 005e BB69     		ldr	r3, [r7, #24]
+ 1224 0060 4FEA4303 		lsl	r3, r3, #1
+ 1225 0064 BB61     		str	r3, [r7, #24]
+ 451:../src/lcd.cpp **** 
+ 452:../src/lcd.cpp ****     /* Draw initial position */
+ 453:../src/lcd.cpp ****     response = LcdPixel( x1, y1, mode );
+ 1226              		.loc 1 453 0
+ 1227 0066 F979     		ldrb	r1, [r7, #7]	@ zero_extendqisi2
+ 1228 0068 7A79     		ldrb	r2, [r7, #5]	@ zero_extendqisi2
+ 1229 006a 97F82830 		ldrb	r3, [r7, #40]	@ zero_extendqisi2
+ 1230 006e 0846     		mov	r0, r1
+ 1231 0070 1146     		mov	r1, r2
+ 1232 0072 1A46     		mov	r2, r3
+ 1233 0074 FFF7FEFF 		bl	_Z8LcdPixelhh12LcdPixelMode
+ 1234 0078 0346     		mov	r3, r0
+ 1235 007a FB72     		strb	r3, [r7, #11]
+ 454:../src/lcd.cpp ****     if(response)
+ 1236              		.loc 1 454 0
+ 1237 007c FB7A     		ldrb	r3, [r7, #11]	@ zero_extendqisi2
+ 1238 007e 002B     		cmp	r3, #0
+ 1239 0080 01D0     		beq	.L43
+ 455:../src/lcd.cpp ****         return response;
+ 1240              		.loc 1 455 0
+ 1241 0082 FB7A     		ldrb	r3, [r7, #11]	@ zero_extendqisi2
+ 1242 0084 70E0     		b	.L44
+ 1243              	.L43:
+ 456:../src/lcd.cpp **** 
+ 457:../src/lcd.cpp ****     /* Draw next positions until end */
+ 458:../src/lcd.cpp ****     if ( dx > dy )
+ 1244              		.loc 1 458 0
+ 1245 0086 FA69     		ldr	r2, [r7, #28]
+ 1246 0088 BB69     		ldr	r3, [r7, #24]
+ 1247 008a 9A42     		cmp	r2, r3
+ 1248 008c 35DD     		ble	.L45
+ 459:../src/lcd.cpp ****     {
+ 460:../src/lcd.cpp ****         /* Take fraction */
+ 461:../src/lcd.cpp ****         fraction = dy - ( dx >> 1);
+ 1249              		.loc 1 461 0
+ 1250 008e FB69     		ldr	r3, [r7, #28]
+ 1251 0090 4FEA6303 		asr	r3, r3, #1
+ 1252 0094 BA69     		ldr	r2, [r7, #24]
+ 1253 0096 D31A     		subs	r3, r2, r3
+ 1254 0098 FB60     		str	r3, [r7, #12]
+ 462:../src/lcd.cpp ****         while ( x1 != x2 )
+ 1255              		.loc 1 462 0
+ 1256 009a 24E0     		b	.L46
+ 1257              	.L48:
+ 463:../src/lcd.cpp ****         {
+ 464:../src/lcd.cpp ****             if ( fraction >= 0 )
+ 1258              		.loc 1 464 0
+ 1259 009c FB68     		ldr	r3, [r7, #12]
+ 1260 009e 002B     		cmp	r3, #0
+ 1261 00a0 08DB     		blt	.L47
+ 465:../src/lcd.cpp ****             {
+ 466:../src/lcd.cpp ****                 y1 += stepy;
+ 1262              		.loc 1 466 0
+ 1263 00a2 3B69     		ldr	r3, [r7, #16]
+ 1264 00a4 DAB2     		uxtb	r2, r3
+ 1265 00a6 7B79     		ldrb	r3, [r7, #5]
+ 1266 00a8 D318     		adds	r3, r2, r3
+ 1267 00aa 7B71     		strb	r3, [r7, #5]
+ 467:../src/lcd.cpp ****                 fraction -= dx;
+ 1268              		.loc 1 467 0
+ 1269 00ac FA68     		ldr	r2, [r7, #12]
+ 1270 00ae FB69     		ldr	r3, [r7, #28]
+ 1271 00b0 D31A     		subs	r3, r2, r3
+ 1272 00b2 FB60     		str	r3, [r7, #12]
+ 1273              	.L47:
+ 468:../src/lcd.cpp ****             }
+ 469:../src/lcd.cpp ****             x1 += stepx;
+ 1274              		.loc 1 469 0
+ 1275 00b4 7B69     		ldr	r3, [r7, #20]
+ 1276 00b6 DAB2     		uxtb	r2, r3
+ 1277 00b8 FB79     		ldrb	r3, [r7, #7]
+ 1278 00ba D318     		adds	r3, r2, r3
+ 1279 00bc FB71     		strb	r3, [r7, #7]
+ 470:../src/lcd.cpp ****             fraction += dy;
+ 1280              		.loc 1 470 0
+ 1281 00be FA68     		ldr	r2, [r7, #12]
+ 1282 00c0 BB69     		ldr	r3, [r7, #24]
+ 1283 00c2 D318     		adds	r3, r2, r3
+ 1284 00c4 FB60     		str	r3, [r7, #12]
+ 471:../src/lcd.cpp **** 
+ 472:../src/lcd.cpp ****             /* Draw calculated point */
+ 473:../src/lcd.cpp ****             response = LcdPixel( x1, y1, mode );
+ 1285              		.loc 1 473 0
+ 1286 00c6 F979     		ldrb	r1, [r7, #7]	@ zero_extendqisi2
+ 1287 00c8 7A79     		ldrb	r2, [r7, #5]	@ zero_extendqisi2
+ 1288 00ca 97F82830 		ldrb	r3, [r7, #40]	@ zero_extendqisi2
+ 1289 00ce 0846     		mov	r0, r1
+ 1290 00d0 1146     		mov	r1, r2
+ 1291 00d2 1A46     		mov	r2, r3
+ 1292 00d4 FFF7FEFF 		bl	_Z8LcdPixelhh12LcdPixelMode
+ 1293 00d8 0346     		mov	r3, r0
+ 1294 00da FB72     		strb	r3, [r7, #11]
+ 474:../src/lcd.cpp ****             if(response)
+ 1295              		.loc 1 474 0
+ 1296 00dc FB7A     		ldrb	r3, [r7, #11]	@ zero_extendqisi2
+ 1297 00de 002B     		cmp	r3, #0
+ 1298 00e0 01D0     		beq	.L46
+ 475:../src/lcd.cpp ****                 return response;
+ 1299              		.loc 1 475 0
+ 1300 00e2 FB7A     		ldrb	r3, [r7, #11]	@ zero_extendqisi2
+ 1301 00e4 40E0     		b	.L44
+ 1302              	.L46:
+ 462:../src/lcd.cpp ****         while ( x1 != x2 )
+ 1303              		.loc 1 462 0 discriminator 1
+ 1304 00e6 FA79     		ldrb	r2, [r7, #7]	@ zero_extendqisi2
+ 1305 00e8 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1306 00ea 9A42     		cmp	r2, r3
+ 1307 00ec 0CBF     		ite	eq
+ 1308 00ee 0023     		moveq	r3, #0
+ 1309 00f0 0123     		movne	r3, #1
+ 1310 00f2 DBB2     		uxtb	r3, r3
+ 1311 00f4 002B     		cmp	r3, #0
+ 1312 00f6 D1D1     		bne	.L48
+ 462:../src/lcd.cpp ****         while ( x1 != x2 )
+ 1313              		.loc 1 462 0 is_stmt 0
+ 1314 00f8 34E0     		b	.L49
+ 1315              	.L45:
+ 476:../src/lcd.cpp **** 
+ 477:../src/lcd.cpp ****         }
+ 478:../src/lcd.cpp ****     }
+ 479:../src/lcd.cpp ****     else
+ 480:../src/lcd.cpp ****     {
+ 481:../src/lcd.cpp ****         /* Take fraction */
+ 482:../src/lcd.cpp ****         fraction = dx - ( dy >> 1);
+ 1316              		.loc 1 482 0 is_stmt 1
+ 1317 00fa BB69     		ldr	r3, [r7, #24]
+ 1318 00fc 4FEA6303 		asr	r3, r3, #1
+ 1319 0100 FA69     		ldr	r2, [r7, #28]
+ 1320 0102 D31A     		subs	r3, r2, r3
+ 1321 0104 FB60     		str	r3, [r7, #12]
+ 483:../src/lcd.cpp ****         while ( y1 != y2 )
+ 1322              		.loc 1 483 0
+ 1323 0106 24E0     		b	.L50
+ 1324              	.L52:
+ 484:../src/lcd.cpp ****         {
+ 485:../src/lcd.cpp ****             if ( fraction >= 0 )
+ 1325              		.loc 1 485 0
+ 1326 0108 FB68     		ldr	r3, [r7, #12]
+ 1327 010a 002B     		cmp	r3, #0
+ 1328 010c 08DB     		blt	.L51
+ 486:../src/lcd.cpp ****             {
+ 487:../src/lcd.cpp ****                 x1 += stepx;
+ 1329              		.loc 1 487 0
+ 1330 010e 7B69     		ldr	r3, [r7, #20]
+ 1331 0110 DAB2     		uxtb	r2, r3
+ 1332 0112 FB79     		ldrb	r3, [r7, #7]
+ 1333 0114 D318     		adds	r3, r2, r3
+ 1334 0116 FB71     		strb	r3, [r7, #7]
+ 488:../src/lcd.cpp ****                 fraction -= dy;
+ 1335              		.loc 1 488 0
+ 1336 0118 FA68     		ldr	r2, [r7, #12]
+ 1337 011a BB69     		ldr	r3, [r7, #24]
+ 1338 011c D31A     		subs	r3, r2, r3
+ 1339 011e FB60     		str	r3, [r7, #12]
+ 1340              	.L51:
+ 489:../src/lcd.cpp ****             }
+ 490:../src/lcd.cpp ****             y1 += stepy;
+ 1341              		.loc 1 490 0
+ 1342 0120 3B69     		ldr	r3, [r7, #16]
+ 1343 0122 DAB2     		uxtb	r2, r3
+ 1344 0124 7B79     		ldrb	r3, [r7, #5]
+ 1345 0126 D318     		adds	r3, r2, r3
+ 1346 0128 7B71     		strb	r3, [r7, #5]
+ 491:../src/lcd.cpp ****             fraction += dx;
+ 1347              		.loc 1 491 0
+ 1348 012a FA68     		ldr	r2, [r7, #12]
+ 1349 012c FB69     		ldr	r3, [r7, #28]
+ 1350 012e D318     		adds	r3, r2, r3
+ 1351 0130 FB60     		str	r3, [r7, #12]
+ 492:../src/lcd.cpp **** 
+ 493:../src/lcd.cpp ****             /* Draw calculated point */
+ 494:../src/lcd.cpp ****             response = LcdPixel( x1, y1, mode );
+ 1352              		.loc 1 494 0
+ 1353 0132 F979     		ldrb	r1, [r7, #7]	@ zero_extendqisi2
+ 1354 0134 7A79     		ldrb	r2, [r7, #5]	@ zero_extendqisi2
+ 1355 0136 97F82830 		ldrb	r3, [r7, #40]	@ zero_extendqisi2
+ 1356 013a 0846     		mov	r0, r1
+ 1357 013c 1146     		mov	r1, r2
+ 1358 013e 1A46     		mov	r2, r3
+ 1359 0140 FFF7FEFF 		bl	_Z8LcdPixelhh12LcdPixelMode
+ 1360 0144 0346     		mov	r3, r0
+ 1361 0146 FB72     		strb	r3, [r7, #11]
+ 495:../src/lcd.cpp ****             if(response)
+ 1362              		.loc 1 495 0
+ 1363 0148 FB7A     		ldrb	r3, [r7, #11]	@ zero_extendqisi2
+ 1364 014a 002B     		cmp	r3, #0
+ 1365 014c 01D0     		beq	.L50
+ 496:../src/lcd.cpp ****                 return response;
+ 1366              		.loc 1 496 0
+ 1367 014e FB7A     		ldrb	r3, [r7, #11]	@ zero_extendqisi2
+ 1368 0150 0AE0     		b	.L44
+ 1369              	.L50:
+ 483:../src/lcd.cpp ****         while ( y1 != y2 )
+ 1370              		.loc 1 483 0 discriminator 1
+ 1371 0152 7A79     		ldrb	r2, [r7, #5]	@ zero_extendqisi2
+ 1372 0154 3B79     		ldrb	r3, [r7, #4]	@ zero_extendqisi2
+ 1373 0156 9A42     		cmp	r2, r3
+ 1374 0158 0CBF     		ite	eq
+ 1375 015a 0023     		moveq	r3, #0
+ 1376 015c 0123     		movne	r3, #1
+ 1377 015e DBB2     		uxtb	r3, r3
+ 1378 0160 002B     		cmp	r3, #0
+ 1379 0162 D1D1     		bne	.L52
+ 1380              	.L49:
+ 497:../src/lcd.cpp ****         }
+ 498:../src/lcd.cpp ****     }
+ 499:../src/lcd.cpp **** 
+ 500:../src/lcd.cpp ****     /* Set update flag to be true */
+ 501:../src/lcd.cpp ****     //UpdateLcd = TRUE;
+ 502:../src/lcd.cpp ****     return OK;
+ 1381              		.loc 1 502 0
+ 1382 0164 4FF00003 		mov	r3, #0
+ 1383              	.L44:
+ 1384              	.LBE6:
+ 503:../src/lcd.cpp **** }
+ 1385              		.loc 1 503 0
+ 1386 0168 1846     		mov	r0, r3
+ 1387 016a 07F12007 		add	r7, r7, #32
+ 1388 016e BD46     		mov	sp, r7
+ 1389 0170 80BD     		pop	{r7, pc}
+ 1390              		.cfi_endproc
+ 1391              	.LFE38:
+ 1393 0172 00BF     		.section	.text._Z12LcdSingleBarhhhh12LcdPixelMode,"ax",%progbits
+ 1394              		.align	2
+ 1395              		.global	_Z12LcdSingleBarhhhh12LcdPixelMode
+ 1396              		.thumb
+ 1397              		.thumb_func
+ 1399              	_Z12LcdSingleBarhhhh12LcdPixelMode:
+ 1400              	.LFB39:
+ 504:../src/lcd.cpp **** 
+ 505:../src/lcd.cpp **** /*
+ 506:../src/lcd.cpp ****  * Name         :  LcdSingleBar
+ 507:../src/lcd.cpp ****  * Description  :  Display single bar.
+ 508:../src/lcd.cpp ****  * Argument(s)  :  baseX  -> absolute x axis coordinate
+ 509:../src/lcd.cpp ****  *                 baseY  -> absolute y axis coordinate
+ 510:../src/lcd.cpp ****  *				   height -> height of bar (in pixel)
+ 511:../src/lcd.cpp ****  *				   width  -> width of bar (in pixel)
+ 512:../src/lcd.cpp ****  *				   mode   -> Off, On or Xor. See enum in lcd.h.
+ 513:../src/lcd.cpp ****  * Return value :  see return value on lcd.h
+ 514:../src/lcd.cpp ****  */
+ 515:../src/lcd.cpp **** byte LcdSingleBar ( byte baseX, byte baseY, byte height, byte width, LcdPixelMode mode )
+ 516:../src/lcd.cpp **** {
+ 1401              		.loc 1 516 0
+ 1402              		.cfi_startproc
+ 1403              		@ args = 4, pretend = 0, frame = 16
+ 1404              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1405 0000 80B5     		push	{r7, lr}
+ 1406              	.LCFI23:
+ 1407              		.cfi_def_cfa_offset 8
+ 1408              		.cfi_offset 14, -4
+ 1409              		.cfi_offset 7, -8
+ 1410 0002 84B0     		sub	sp, sp, #16
+ 1411              	.LCFI24:
+ 1412              		.cfi_def_cfa_offset 24
+ 1413 0004 00AF     		add	r7, sp, #0
+ 1414              	.LCFI25:
+ 1415              		.cfi_def_cfa_register 7
+ 1416 0006 F871     		strb	r0, [r7, #7]
+ 1417 0008 B971     		strb	r1, [r7, #6]
+ 1418 000a 7A71     		strb	r2, [r7, #5]
+ 1419 000c 3B71     		strb	r3, [r7, #4]
+ 1420              	.LBB7:
+ 517:../src/lcd.cpp **** 	byte tmpIdxX,tmpIdxY,tmp;
+ 518:../src/lcd.cpp **** 
+ 519:../src/lcd.cpp ****     byte response;
+ 520:../src/lcd.cpp **** 
+ 521:../src/lcd.cpp ****     /* Checking border */
+ 522:../src/lcd.cpp **** 	if ( ( baseX > LCD_X_RES ) || ( baseY > LCD_Y_RES ) ) return OUT_OF_BORDER;
+ 1421              		.loc 1 522 0
+ 1422 000e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1423 0010 802B     		cmp	r3, #128
+ 1424 0012 02D8     		bhi	.L54
+ 1425              		.loc 1 522 0 is_stmt 0 discriminator 2
+ 1426 0014 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1427 0016 402B     		cmp	r3, #64
+ 1428 0018 02D9     		bls	.L55
+ 1429              	.L54:
+ 1430              		.loc 1 522 0 discriminator 1
+ 1431 001a 4FF00103 		mov	r3, #1
+ 1432 001e 3EE0     		b	.L56
+ 1433              	.L55:
+ 523:../src/lcd.cpp **** 
+ 524:../src/lcd.cpp **** 	if ( height > baseY )
+ 1434              		.loc 1 524 0 is_stmt 1
+ 1435 0020 7A79     		ldrb	r2, [r7, #5]	@ zero_extendqisi2
+ 1436 0022 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1437 0024 9A42     		cmp	r2, r3
+ 1438 0026 03D9     		bls	.L57
+ 525:../src/lcd.cpp **** 		tmp = 0;
+ 1439              		.loc 1 525 0
+ 1440 0028 4FF00003 		mov	r3, #0
+ 1441 002c 7B73     		strb	r3, [r7, #13]
+ 1442 002e 03E0     		b	.L58
+ 1443              	.L57:
+ 526:../src/lcd.cpp **** 	else
+ 527:../src/lcd.cpp **** 		tmp = baseY - height;
+ 1444              		.loc 1 527 0
+ 1445 0030 BA79     		ldrb	r2, [r7, #6]
+ 1446 0032 7B79     		ldrb	r3, [r7, #5]
+ 1447 0034 D31A     		subs	r3, r2, r3
+ 1448 0036 7B73     		strb	r3, [r7, #13]
+ 1449              	.L58:
+ 528:../src/lcd.cpp **** 
+ 529:../src/lcd.cpp ****     /* Draw lines */
+ 530:../src/lcd.cpp **** 	for ( tmpIdxY = tmp; tmpIdxY < baseY; tmpIdxY++ )
+ 1450              		.loc 1 530 0
+ 1451 0038 7B7B     		ldrb	r3, [r7, #13]
+ 1452 003a BB73     		strb	r3, [r7, #14]
+ 1453 003c 24E0     		b	.L59
+ 1454              	.L63:
+ 531:../src/lcd.cpp **** 	{
+ 532:../src/lcd.cpp **** 		for ( tmpIdxX = baseX; tmpIdxX < (baseX + width); tmpIdxX++ )
+ 1455              		.loc 1 532 0
+ 1456 003e FB79     		ldrb	r3, [r7, #7]
+ 1457 0040 FB73     		strb	r3, [r7, #15]
+ 1458 0042 12E0     		b	.L60
+ 1459              	.L62:
+ 533:../src/lcd.cpp ****         {
+ 534:../src/lcd.cpp **** 			response = LcdPixel( tmpIdxX, tmpIdxY, mode );
+ 1460              		.loc 1 534 0
+ 1461 0044 F97B     		ldrb	r1, [r7, #15]	@ zero_extendqisi2
+ 1462 0046 BA7B     		ldrb	r2, [r7, #14]	@ zero_extendqisi2
+ 1463 0048 3B7E     		ldrb	r3, [r7, #24]	@ zero_extendqisi2
+ 1464 004a 0846     		mov	r0, r1
+ 1465 004c 1146     		mov	r1, r2
+ 1466 004e 1A46     		mov	r2, r3
+ 1467 0050 FFF7FEFF 		bl	_Z8LcdPixelhh12LcdPixelMode
+ 1468 0054 0346     		mov	r3, r0
+ 1469 0056 3B73     		strb	r3, [r7, #12]
+ 535:../src/lcd.cpp ****             if(response)
+ 1470              		.loc 1 535 0
+ 1471 0058 3B7B     		ldrb	r3, [r7, #12]	@ zero_extendqisi2
+ 1472 005a 002B     		cmp	r3, #0
+ 1473 005c 01D0     		beq	.L61
+ 536:../src/lcd.cpp ****                 return response;
+ 1474              		.loc 1 536 0
+ 1475 005e 3B7B     		ldrb	r3, [r7, #12]	@ zero_extendqisi2
+ 1476 0060 1DE0     		b	.L56
+ 1477              	.L61:
+ 532:../src/lcd.cpp **** 		for ( tmpIdxX = baseX; tmpIdxX < (baseX + width); tmpIdxX++ )
+ 1478              		.loc 1 532 0
+ 1479 0062 FB7B     		ldrb	r3, [r7, #15]
+ 1480 0064 03F10103 		add	r3, r3, #1
+ 1481 0068 FB73     		strb	r3, [r7, #15]
+ 1482              	.L60:
+ 532:../src/lcd.cpp **** 		for ( tmpIdxX = baseX; tmpIdxX < (baseX + width); tmpIdxX++ )
+ 1483              		.loc 1 532 0 is_stmt 0 discriminator 1
+ 1484 006a FA7B     		ldrb	r2, [r7, #15]	@ zero_extendqisi2
+ 1485 006c F979     		ldrb	r1, [r7, #7]	@ zero_extendqisi2
+ 1486 006e 3B79     		ldrb	r3, [r7, #4]	@ zero_extendqisi2
+ 1487 0070 CB18     		adds	r3, r1, r3
+ 1488 0072 9A42     		cmp	r2, r3
+ 1489 0074 ACBF     		ite	ge
+ 1490 0076 0023     		movge	r3, #0
+ 1491 0078 0123     		movlt	r3, #1
+ 1492 007a DBB2     		uxtb	r3, r3
+ 1493 007c 002B     		cmp	r3, #0
+ 1494 007e E1D1     		bne	.L62
+ 530:../src/lcd.cpp **** 	for ( tmpIdxY = tmp; tmpIdxY < baseY; tmpIdxY++ )
+ 1495              		.loc 1 530 0 is_stmt 1
+ 1496 0080 BB7B     		ldrb	r3, [r7, #14]
+ 1497 0082 03F10103 		add	r3, r3, #1
+ 1498 0086 BB73     		strb	r3, [r7, #14]
+ 1499              	.L59:
+ 530:../src/lcd.cpp **** 	for ( tmpIdxY = tmp; tmpIdxY < baseY; tmpIdxY++ )
+ 1500              		.loc 1 530 0 is_stmt 0 discriminator 1
+ 1501 0088 BA7B     		ldrb	r2, [r7, #14]	@ zero_extendqisi2
+ 1502 008a BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1503 008c 9A42     		cmp	r2, r3
+ 1504 008e 2CBF     		ite	cs
+ 1505 0090 0023     		movcs	r3, #0
+ 1506 0092 0123     		movcc	r3, #1
+ 1507 0094 DBB2     		uxtb	r3, r3
+ 1508 0096 002B     		cmp	r3, #0
+ 1509 0098 D1D1     		bne	.L63
+ 537:../src/lcd.cpp **** 
+ 538:../src/lcd.cpp ****         }
+ 539:../src/lcd.cpp **** 	}
+ 540:../src/lcd.cpp **** 
+ 541:../src/lcd.cpp ****     /* Set update flag to be true */
+ 542:../src/lcd.cpp **** 	//UpdateLcd = TRUE;
+ 543:../src/lcd.cpp ****     return OK;
+ 1510              		.loc 1 543 0 is_stmt 1
+ 1511 009a 4FF00003 		mov	r3, #0
+ 1512              	.L56:
+ 1513              	.LBE7:
+ 544:../src/lcd.cpp **** }
+ 1514              		.loc 1 544 0
+ 1515 009e 1846     		mov	r0, r3
+ 1516 00a0 07F11007 		add	r7, r7, #16
+ 1517 00a4 BD46     		mov	sp, r7
+ 1518 00a6 80BD     		pop	{r7, pc}
+ 1519              		.cfi_endproc
+ 1520              	.LFE39:
+ 1522              		.section	.text._Z7LcdBarsPhhhh,"ax",%progbits
+ 1523              		.align	2
+ 1524              		.global	_Z7LcdBarsPhhhh
+ 1525              		.thumb
+ 1526              		.thumb_func
+ 1528              	_Z7LcdBarsPhhhh:
+ 1529              	.LFB40:
+ 545:../src/lcd.cpp **** 
+ 546:../src/lcd.cpp **** /*
+ 547:../src/lcd.cpp ****  * Name         :  LcdBars
+ 548:../src/lcd.cpp ****  * Description  :  Display multiple bars.
+ 549:../src/lcd.cpp ****  * Argument(s)  :  data[] -> data which want to be plotted
+ 550:../src/lcd.cpp ****  *                 numbBars  -> number of bars want to be plotted
+ 551:../src/lcd.cpp ****  *				   width  -> width of bar (in pixel)
+ 552:../src/lcd.cpp ****  * Return value :  see return value on lcd.h
+ 553:../src/lcd.cpp ****  * Note         :  Please check EMPTY_SPACE_BARS, BAR_X, BAR_Y in lcd.h
+ 554:../src/lcd.cpp ****  */
+ 555:../src/lcd.cpp **** byte LcdBars ( byte data[], byte numbBars, byte width, byte multiplier )
+ 556:../src/lcd.cpp **** {
+ 1530              		.loc 1 556 0
+ 1531              		.cfi_startproc
+ 1532              		@ args = 0, pretend = 0, frame = 16
+ 1533              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1534 0000 80B5     		push	{r7, lr}
+ 1535              	.LCFI26:
+ 1536              		.cfi_def_cfa_offset 8
+ 1537              		.cfi_offset 14, -4
+ 1538              		.cfi_offset 7, -8
+ 1539 0002 86B0     		sub	sp, sp, #24
+ 1540              	.LCFI27:
+ 1541              		.cfi_def_cfa_offset 32
+ 1542 0004 02AF     		add	r7, sp, #8
+ 1543              	.LCFI28:
+ 1544              		.cfi_def_cfa 7, 24
+ 1545 0006 7860     		str	r0, [r7, #4]
+ 1546 0008 F970     		strb	r1, [r7, #3]
+ 1547 000a BA70     		strb	r2, [r7, #2]
+ 1548 000c 7B70     		strb	r3, [r7, #1]
+ 1549              	.LBB8:
+ 557:../src/lcd.cpp **** 	byte b;
+ 558:../src/lcd.cpp **** 	byte tmpIdx = 0;
+ 1550              		.loc 1 558 0
+ 1551 000e 4FF00003 		mov	r3, #0
+ 1552 0012 BB73     		strb	r3, [r7, #14]
+ 559:../src/lcd.cpp ****     byte response;
+ 560:../src/lcd.cpp **** 
+ 561:../src/lcd.cpp **** 	for ( b = 0;  b < numbBars ; b++ )
+ 1553              		.loc 1 561 0
+ 1554 0014 4FF00003 		mov	r3, #0
+ 1555 0018 FB73     		strb	r3, [r7, #15]
+ 1556 001a 2DE0     		b	.L65
+ 1557              	.L69:
+ 562:../src/lcd.cpp **** 	{
+ 563:../src/lcd.cpp ****         /* Preventing from out of border (LCD_X_RES) */
+ 564:../src/lcd.cpp **** 		if ( tmpIdx > LCD_X_RES ) return OUT_OF_BORDER;
+ 1558              		.loc 1 564 0
+ 1559 001c BB7B     		ldrb	r3, [r7, #14]	@ zero_extendqisi2
+ 1560 001e 802B     		cmp	r3, #128
+ 1561 0020 02D9     		bls	.L66
+ 1562              		.loc 1 564 0 is_stmt 0 discriminator 1
+ 1563 0022 4FF00103 		mov	r3, #1
+ 1564 0026 32E0     		b	.L67
+ 1565              	.L66:
+ 565:../src/lcd.cpp **** 
+ 566:../src/lcd.cpp **** 		/* Calculate x axis */
+ 567:../src/lcd.cpp **** 		tmpIdx = ((width + EMPTY_SPACE_BARS) * b) + BAR_X;
+ 1566              		.loc 1 567 0 is_stmt 1
+ 1567 0028 BB78     		ldrb	r3, [r7, #2]	@ zero_extendqisi2
+ 1568 002a 03F10203 		add	r3, r3, #2
+ 1569 002e DBB2     		uxtb	r3, r3
+ 1570 0030 FA7B     		ldrb	r2, [r7, #15]
+ 1571 0032 02FB03F3 		mul	r3, r2, r3
+ 1572 0036 DBB2     		uxtb	r3, r3
+ 1573 0038 03F10503 		add	r3, r3, #5
+ 1574 003c BB73     		strb	r3, [r7, #14]
+ 568:../src/lcd.cpp **** 
+ 569:../src/lcd.cpp **** 		/* Draw single bar */
+ 570:../src/lcd.cpp **** 		response = LcdSingleBar( tmpIdx, BAR_Y, data[ b ] * multiplier, width, PIXEL_ON);
+ 1575              		.loc 1 570 0
+ 1576 003e FB7B     		ldrb	r3, [r7, #15]	@ zero_extendqisi2
+ 1577 0040 7A68     		ldr	r2, [r7, #4]
+ 1578 0042 D318     		adds	r3, r2, r3
+ 1579 0044 1B78     		ldrb	r3, [r3, #0]	@ zero_extendqisi2
+ 1580 0046 7A78     		ldrb	r2, [r7, #1]
+ 1581 0048 02FB03F3 		mul	r3, r2, r3
+ 1582 004c DAB2     		uxtb	r2, r3
+ 1583 004e B97B     		ldrb	r1, [r7, #14]	@ zero_extendqisi2
+ 1584 0050 BB78     		ldrb	r3, [r7, #2]	@ zero_extendqisi2
+ 1585 0052 4FF00100 		mov	r0, #1
+ 1586 0056 0090     		str	r0, [sp, #0]
+ 1587 0058 0846     		mov	r0, r1
+ 1588 005a 4FF02601 		mov	r1, #38
+ 1589 005e FFF7FEFF 		bl	_Z12LcdSingleBarhhhh12LcdPixelMode
+ 1590 0062 0346     		mov	r3, r0
+ 1591 0064 7B73     		strb	r3, [r7, #13]
+ 571:../src/lcd.cpp ****         if(response == OUT_OF_BORDER)
+ 1592              		.loc 1 571 0
+ 1593 0066 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 1594 0068 012B     		cmp	r3, #1
+ 1595 006a 01D1     		bne	.L68
+ 572:../src/lcd.cpp ****             return response;
+ 1596              		.loc 1 572 0
+ 1597 006c 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 1598 006e 0EE0     		b	.L67
+ 1599              	.L68:
+ 561:../src/lcd.cpp **** 	for ( b = 0;  b < numbBars ; b++ )
+ 1600              		.loc 1 561 0
+ 1601 0070 FB7B     		ldrb	r3, [r7, #15]
+ 1602 0072 03F10103 		add	r3, r3, #1
+ 1603 0076 FB73     		strb	r3, [r7, #15]
+ 1604              	.L65:
+ 561:../src/lcd.cpp **** 	for ( b = 0;  b < numbBars ; b++ )
+ 1605              		.loc 1 561 0 is_stmt 0 discriminator 1
+ 1606 0078 FA7B     		ldrb	r2, [r7, #15]	@ zero_extendqisi2
+ 1607 007a FB78     		ldrb	r3, [r7, #3]	@ zero_extendqisi2
+ 1608 007c 9A42     		cmp	r2, r3
+ 1609 007e 2CBF     		ite	cs
+ 1610 0080 0023     		movcs	r3, #0
+ 1611 0082 0123     		movcc	r3, #1
+ 1612 0084 DBB2     		uxtb	r3, r3
+ 1613 0086 002B     		cmp	r3, #0
+ 1614 0088 C8D1     		bne	.L69
+ 573:../src/lcd.cpp **** 	}
+ 574:../src/lcd.cpp **** 
+ 575:../src/lcd.cpp **** 	/* Set update flag to be true */
+ 576:../src/lcd.cpp **** 	//UpdateLcd = TRUE;
+ 577:../src/lcd.cpp ****     return OK;
+ 1615              		.loc 1 577 0 is_stmt 1
+ 1616 008a 4FF00003 		mov	r3, #0
+ 1617              	.L67:
+ 1618              	.LBE8:
+ 578:../src/lcd.cpp **** 
+ 579:../src/lcd.cpp **** }
+ 1619              		.loc 1 579 0
+ 1620 008e 1846     		mov	r0, r3
+ 1621 0090 07F11007 		add	r7, r7, #16
+ 1622 0094 BD46     		mov	sp, r7
+ 1623 0096 80BD     		pop	{r7, pc}
+ 1624              		.cfi_endproc
+ 1625              	.LFE40:
+ 1627              		.section	.text._Z7LcdRecthhhh12LcdPixelMode,"ax",%progbits
+ 1628              		.align	2
+ 1629              		.global	_Z7LcdRecthhhh12LcdPixelMode
+ 1630              		.thumb
+ 1631              		.thumb_func
+ 1633              	_Z7LcdRecthhhh12LcdPixelMode:
+ 1634              	.LFB41:
+ 580:../src/lcd.cpp **** /*
+ 581:../src/lcd.cpp ****  * Name         :  LcdRect
+ 582:../src/lcd.cpp ****  * Description  :  Display a rectangle.
+ 583:../src/lcd.cpp ****  * Argument(s)  :  x1   -> absolute first x axis coordinate
+ 584:../src/lcd.cpp ****  *                 y1   -> absolute first y axis coordinate
+ 585:../src/lcd.cpp ****  *				   x2   -> absolute second x axis coordinate
+ 586:../src/lcd.cpp ****  *				   y2   -> absolute second y axis coordinate
+ 587:../src/lcd.cpp ****  *				   mode -> Off, On or Xor. See enum in lcd.h.
+ 588:../src/lcd.cpp ****  * Return value :  see return value on lcd.h.
+ 589:../src/lcd.cpp ****  */
+ 590:../src/lcd.cpp **** byte LcdRect ( byte x1, byte x2, byte y1, byte y2, LcdPixelMode mode )
+ 591:../src/lcd.cpp **** {
+ 1635              		.loc 1 591 0
+ 1636              		.cfi_startproc
+ 1637              		@ args = 4, pretend = 0, frame = 16
+ 1638              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1639 0000 80B5     		push	{r7, lr}
+ 1640              	.LCFI29:
+ 1641              		.cfi_def_cfa_offset 8
+ 1642              		.cfi_offset 14, -4
+ 1643              		.cfi_offset 7, -8
+ 1644 0002 84B0     		sub	sp, sp, #16
+ 1645              	.LCFI30:
+ 1646              		.cfi_def_cfa_offset 24
+ 1647 0004 00AF     		add	r7, sp, #0
+ 1648              	.LCFI31:
+ 1649              		.cfi_def_cfa_register 7
+ 1650 0006 F871     		strb	r0, [r7, #7]
+ 1651 0008 B971     		strb	r1, [r7, #6]
+ 1652 000a 7A71     		strb	r2, [r7, #5]
+ 1653 000c 3B71     		strb	r3, [r7, #4]
+ 1654              	.LBB9:
+ 592:../src/lcd.cpp **** 	byte tmpIdxX,tmpIdxY;
+ 593:../src/lcd.cpp ****     byte response;
+ 594:../src/lcd.cpp **** 
+ 595:../src/lcd.cpp **** 	/* Checking border */
+ 596:../src/lcd.cpp **** 	if ( ( x1 > LCD_X_RES ) ||  ( x2 > LCD_X_RES ) || ( y1 > LCD_Y_RES ) || ( y2 > LCD_Y_RES ) )
+ 1655              		.loc 1 596 0
+ 1656 000e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1657 0010 802B     		cmp	r3, #128
+ 1658 0012 08D8     		bhi	.L71
+ 1659              		.loc 1 596 0 is_stmt 0 discriminator 1
+ 1660 0014 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1661 0016 802B     		cmp	r3, #128
+ 1662 0018 05D8     		bhi	.L71
+ 1663              		.loc 1 596 0 discriminator 2
+ 1664 001a 7B79     		ldrb	r3, [r7, #5]	@ zero_extendqisi2
+ 1665 001c 402B     		cmp	r3, #64
+ 1666 001e 02D8     		bhi	.L71
+ 1667              		.loc 1 596 0 discriminator 3
+ 1668 0020 3B79     		ldrb	r3, [r7, #4]	@ zero_extendqisi2
+ 1669 0022 402B     		cmp	r3, #64
+ 1670 0024 02D9     		bls	.L72
+ 1671              	.L71:
+ 597:../src/lcd.cpp **** 		/* If out of border then return */
+ 598:../src/lcd.cpp **** 		return OUT_OF_BORDER;
+ 1672              		.loc 1 598 0 is_stmt 1
+ 1673 0026 4FF00103 		mov	r3, #1
+ 1674 002a 38E0     		b	.L73
+ 1675              	.L72:
+ 599:../src/lcd.cpp **** 
+ 600:../src/lcd.cpp **** 	if ( ( x2 > x1 ) && ( y2 > y1 ) )
+ 1676              		.loc 1 600 0
+ 1677 002c BA79     		ldrb	r2, [r7, #6]	@ zero_extendqisi2
+ 1678 002e FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1679 0030 9A42     		cmp	r2, r3
+ 1680 0032 32D9     		bls	.L74
+ 1681              		.loc 1 600 0 is_stmt 0 discriminator 1
+ 1682 0034 3A79     		ldrb	r2, [r7, #4]	@ zero_extendqisi2
+ 1683 0036 7B79     		ldrb	r3, [r7, #5]	@ zero_extendqisi2
+ 1684 0038 9A42     		cmp	r2, r3
+ 1685 003a 2ED9     		bls	.L74
+ 601:../src/lcd.cpp **** 	{
+ 602:../src/lcd.cpp **** 		for ( tmpIdxY = y1; tmpIdxY < y2; tmpIdxY++ )
+ 1686              		.loc 1 602 0 is_stmt 1
+ 1687 003c 7B79     		ldrb	r3, [r7, #5]
+ 1688 003e BB73     		strb	r3, [r7, #14]
+ 1689 0040 22E0     		b	.L75
+ 1690              	.L79:
+ 603:../src/lcd.cpp **** 		{
+ 604:../src/lcd.cpp **** 			/* Draw line horizontally */
+ 605:../src/lcd.cpp **** 			for ( tmpIdxX = x1; tmpIdxX < x2; tmpIdxX++ )
+ 1691              		.loc 1 605 0
+ 1692 0042 FB79     		ldrb	r3, [r7, #7]
+ 1693 0044 FB73     		strb	r3, [r7, #15]
+ 1694 0046 12E0     		b	.L76
+ 1695              	.L78:
+ 606:../src/lcd.cpp ****             {
+ 607:../src/lcd.cpp **** 				/* Draw a pixel */
+ 608:../src/lcd.cpp **** 				response = LcdPixel( tmpIdxX, tmpIdxY, mode );
+ 1696              		.loc 1 608 0
+ 1697 0048 F97B     		ldrb	r1, [r7, #15]	@ zero_extendqisi2
+ 1698 004a BA7B     		ldrb	r2, [r7, #14]	@ zero_extendqisi2
+ 1699 004c 3B7E     		ldrb	r3, [r7, #24]	@ zero_extendqisi2
+ 1700 004e 0846     		mov	r0, r1
+ 1701 0050 1146     		mov	r1, r2
+ 1702 0052 1A46     		mov	r2, r3
+ 1703 0054 FFF7FEFF 		bl	_Z8LcdPixelhh12LcdPixelMode
+ 1704 0058 0346     		mov	r3, r0
+ 1705 005a 7B73     		strb	r3, [r7, #13]
+ 609:../src/lcd.cpp ****                 if(response)
+ 1706              		.loc 1 609 0
+ 1707 005c 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 1708 005e 002B     		cmp	r3, #0
+ 1709 0060 01D0     		beq	.L77
+ 610:../src/lcd.cpp ****                     return response;
+ 1710              		.loc 1 610 0
+ 1711 0062 7B7B     		ldrb	r3, [r7, #13]	@ zero_extendqisi2
+ 1712 0064 1BE0     		b	.L73
+ 1713              	.L77:
+ 605:../src/lcd.cpp **** 			for ( tmpIdxX = x1; tmpIdxX < x2; tmpIdxX++ )
+ 1714              		.loc 1 605 0
+ 1715 0066 FB7B     		ldrb	r3, [r7, #15]
+ 1716 0068 03F10103 		add	r3, r3, #1
+ 1717 006c FB73     		strb	r3, [r7, #15]
+ 1718              	.L76:
+ 605:../src/lcd.cpp **** 			for ( tmpIdxX = x1; tmpIdxX < x2; tmpIdxX++ )
+ 1719              		.loc 1 605 0 is_stmt 0 discriminator 1
+ 1720 006e FA7B     		ldrb	r2, [r7, #15]	@ zero_extendqisi2
+ 1721 0070 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1722 0072 9A42     		cmp	r2, r3
+ 1723 0074 2CBF     		ite	cs
+ 1724 0076 0023     		movcs	r3, #0
+ 1725 0078 0123     		movcc	r3, #1
+ 1726 007a DBB2     		uxtb	r3, r3
+ 1727 007c 002B     		cmp	r3, #0
+ 1728 007e E3D1     		bne	.L78
+ 602:../src/lcd.cpp **** 		for ( tmpIdxY = y1; tmpIdxY < y2; tmpIdxY++ )
+ 1729              		.loc 1 602 0 is_stmt 1
+ 1730 0080 BB7B     		ldrb	r3, [r7, #14]
+ 1731 0082 03F10103 		add	r3, r3, #1
+ 1732 0086 BB73     		strb	r3, [r7, #14]
+ 1733              	.L75:
+ 602:../src/lcd.cpp **** 		for ( tmpIdxY = y1; tmpIdxY < y2; tmpIdxY++ )
+ 1734              		.loc 1 602 0 is_stmt 0 discriminator 1
+ 1735 0088 BA7B     		ldrb	r2, [r7, #14]	@ zero_extendqisi2
+ 1736 008a 3B79     		ldrb	r3, [r7, #4]	@ zero_extendqisi2
+ 1737 008c 9A42     		cmp	r2, r3
+ 1738 008e 2CBF     		ite	cs
+ 1739 0090 0023     		movcs	r3, #0
+ 1740 0092 0123     		movcc	r3, #1
+ 1741 0094 DBB2     		uxtb	r3, r3
+ 1742 0096 002B     		cmp	r3, #0
+ 1743 0098 D3D1     		bne	.L79
+ 1744              	.L74:
+ 611:../src/lcd.cpp ****             }
+ 612:../src/lcd.cpp **** 		}
+ 613:../src/lcd.cpp **** 
+ 614:../src/lcd.cpp **** 		/* Set update flag to be true */
+ 615:../src/lcd.cpp **** 		//UpdateLcd = TRUE;
+ 616:../src/lcd.cpp **** 	}
+ 617:../src/lcd.cpp ****     return OK;
+ 1745              		.loc 1 617 0 is_stmt 1
+ 1746 009a 4FF00003 		mov	r3, #0
+ 1747              	.L73:
+ 1748              	.LBE9:
+ 618:../src/lcd.cpp **** }
+ 1749              		.loc 1 618 0
+ 1750 009e 1846     		mov	r0, r3
+ 1751 00a0 07F11007 		add	r7, r7, #16
+ 1752 00a4 BD46     		mov	sp, r7
+ 1753 00a6 80BD     		pop	{r7, pc}
+ 1754              		.cfi_endproc
+ 1755              	.LFE41:
+ 1757              		.section	.text._Z8LcdImagePKh,"ax",%progbits
+ 1758              		.align	2
+ 1759              		.global	_Z8LcdImagePKh
+ 1760              		.thumb
+ 1761              		.thumb_func
+ 1763              	_Z8LcdImagePKh:
+ 1764              	.LFB42:
+ 619:../src/lcd.cpp **** /*
+ 620:../src/lcd.cpp ****  * Name         :  LcdImage
+ 621:../src/lcd.cpp ****  * Description  :  Image mode display routine.
+ 622:../src/lcd.cpp ****  * Argument(s)  :  Address of image in hexes
+ 623:../src/lcd.cpp ****  * Return value :  None.
+ 624:../src/lcd.cpp ****  * Example      :  LcdImage(&sample_image_declared_as_array);
+ 625:../src/lcd.cpp ****  */
+ 626:../src/lcd.cpp **** void LcdImage ( const byte *imageData )
+ 627:../src/lcd.cpp **** {
+ 1765              		.loc 1 627 0
+ 1766              		.cfi_startproc
+ 1767              		@ args = 0, pretend = 0, frame = 8
+ 1768              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1769 0000 80B5     		push	{r7, lr}
+ 1770              	.LCFI32:
+ 1771              		.cfi_def_cfa_offset 8
+ 1772              		.cfi_offset 14, -4
+ 1773              		.cfi_offset 7, -8
+ 1774 0002 82B0     		sub	sp, sp, #8
+ 1775              	.LCFI33:
+ 1776              		.cfi_def_cfa_offset 16
+ 1777 0004 00AF     		add	r7, sp, #0
+ 1778              	.LCFI34:
+ 1779              		.cfi_def_cfa_register 7
+ 1780 0006 7860     		str	r0, [r7, #4]
+ 628:../src/lcd.cpp **** 	/* Initialize cache index to 0 */
+ 629:../src/lcd.cpp **** //	LcdCacheIdx = 0;
+ 630:../src/lcd.cpp **** //	/* While within cache range */
+ 631:../src/lcd.cpp **** //    for ( LcdCacheIdx = 0; LcdCacheIdx < LCD_CACHE_SIZE; LcdCacheIdx++ )
+ 632:../src/lcd.cpp **** //    {
+ 633:../src/lcd.cpp **** //		/* Copy data from pointer to cache buffer */
+ 634:../src/lcd.cpp **** //        LcdCache[LcdCacheIdx] = pgm_read_byte( imageData++ );
+ 635:../src/lcd.cpp **** //    }
+ 636:../src/lcd.cpp **** 	/* optimized by Jakub Lasinski, version 0.2.6, March 14, 2009 */
+ 637:../src/lcd.cpp ****     memcpy(LcdCache,imageData,LCD_CACHE_SIZE);	//Same as aboeve - 6 bytes less and faster instructi
+ 1781              		.loc 1 637 0
+ 1782 0008 40F20003 		movw	r3, #:lower16:LcdCache
+ 1783 000c C0F20003 		movt	r3, #:upper16:LcdCache
+ 1784 0010 7A68     		ldr	r2, [r7, #4]
+ 1785 0012 1946     		mov	r1, r3
+ 1786 0014 4FF48063 		mov	r3, #1024
+ 1787 0018 0846     		mov	r0, r1
+ 1788 001a 1146     		mov	r1, r2
+ 1789 001c 1A46     		mov	r2, r3
+ 1790 001e FFF7FEFF 		bl	memcpy
+ 638:../src/lcd.cpp **** 	/* Reset watermark pointers to be full */
+ 639:../src/lcd.cpp ****     LoWaterMark = 0;
+ 1791              		.loc 1 639 0
+ 1792 0022 40F20003 		movw	r3, #:lower16:LoWaterMark
+ 1793 0026 C0F20003 		movt	r3, #:upper16:LoWaterMark
+ 1794 002a 4FF00002 		mov	r2, #0
+ 1795 002e 1A60     		str	r2, [r3, #0]
+ 640:../src/lcd.cpp ****     HiWaterMark = LCD_CACHE_SIZE - 1;
+ 1796              		.loc 1 640 0
+ 1797 0030 40F20003 		movw	r3, #:lower16:HiWaterMark
+ 1798 0034 C0F20003 		movt	r3, #:upper16:HiWaterMark
+ 1799 0038 40F2FF32 		movw	r2, #1023
+ 1800 003c 1A60     		str	r2, [r3, #0]
+ 641:../src/lcd.cpp **** 
+ 642:../src/lcd.cpp **** 	/* Set update flag to be true */
+ 643:../src/lcd.cpp ****     //UpdateLcd = TRUE;
+ 644:../src/lcd.cpp **** }
+ 1801              		.loc 1 644 0
+ 1802 003e 07F10807 		add	r7, r7, #8
+ 1803 0042 BD46     		mov	sp, r7
+ 1804 0044 80BD     		pop	{r7, pc}
+ 1805              		.cfi_endproc
+ 1806              	.LFE42:
+ 1808 0046 00BF     		.section	.text._Z9LcdUpdatev,"ax",%progbits
+ 1809              		.align	2
+ 1810              		.global	_Z9LcdUpdatev
+ 1811              		.thumb
+ 1812              		.thumb_func
+ 1814              	_Z9LcdUpdatev:
+ 1815              	.LFB43:
+ 645:../src/lcd.cpp **** 
+ 646:../src/lcd.cpp **** /*
+ 647:../src/lcd.cpp ****  * Name         :  LcdUpdate
+ 648:../src/lcd.cpp ****  * Description  :  Copies the LCD cache into the device RAM.
+ 649:../src/lcd.cpp ****  * Argument(s)  :  None.
+ 650:../src/lcd.cpp ****  * Return value :  None.
+ 651:../src/lcd.cpp ****  */
+ 652:../src/lcd.cpp **** void LcdUpdate ( void )
+ 653:../src/lcd.cpp **** {
+ 1816              		.loc 1 653 0
+ 1817              		.cfi_startproc
+ 1818              		@ args = 0, pretend = 0, frame = 0
+ 1819              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1820 0000 80B5     		push	{r7, lr}
+ 1821              	.LCFI35:
+ 1822              		.cfi_def_cfa_offset 8
+ 1823              		.cfi_offset 14, -4
+ 1824              		.cfi_offset 7, -8
+ 1825 0002 00AF     		add	r7, sp, #0
+ 1826              	.LCFI36:
+ 1827              		.cfi_def_cfa_register 7
+ 654:../src/lcd.cpp **** 	if(UpdateLcd == true){
+ 1828              		.loc 1 654 0
+ 1829 0004 40F20003 		movw	r3, #:lower16:UpdateLcd
+ 1830 0008 C0F20003 		movt	r3, #:upper16:UpdateLcd
+ 1831 000c 1B78     		ldrb	r3, [r3, #0]
+ 1832 000e DBB2     		uxtb	r3, r3
+ 1833 0010 002B     		cmp	r3, #0
+ 1834 0012 19D1     		bne	.L84
+ 1835              	.L82:
+ 655:../src/lcd.cpp **** 		return;
+ 656:../src/lcd.cpp **** 	}
+ 657:../src/lcd.cpp ****     UpdateLcd = true;
+ 1836              		.loc 1 657 0
+ 1837 0014 40F20003 		movw	r3, #:lower16:UpdateLcd
+ 1838 0018 C0F20003 		movt	r3, #:upper16:UpdateLcd
+ 1839 001c 4FF00102 		mov	r2, #1
+ 1840 0020 1A70     		strb	r2, [r3, #0]
+ 658:../src/lcd.cpp **** 
+ 659:../src/lcd.cpp ****     PageAddress = 0;
+ 1841              		.loc 1 659 0
+ 1842 0022 40F20003 		movw	r3, #:lower16:PageAddress
+ 1843 0026 C0F20003 		movt	r3, #:upper16:PageAddress
+ 1844 002a 4FF00002 		mov	r2, #0
+ 1845 002e 1A70     		strb	r2, [r3, #0]
+ 660:../src/lcd.cpp ****     LcdSetPage(PageAddress);
+ 1846              		.loc 1 660 0
+ 1847 0030 40F20003 		movw	r3, #:lower16:PageAddress
+ 1848 0034 C0F20003 		movt	r3, #:upper16:PageAddress
+ 1849 0038 1B78     		ldrb	r3, [r3, #0]
+ 1850 003a DBB2     		uxtb	r3, r3
+ 1851 003c 1846     		mov	r0, r3
+ 1852 003e FFF7FEFF 		bl	_Z10LcdSetPagei
+ 661:../src/lcd.cpp **** 
+ 662:../src/lcd.cpp ****     LcdSendPageDMA();
+ 1853              		.loc 1 662 0
+ 1854 0042 FFF7FEFF 		bl	_Z14LcdSendPageDMAv
+ 1855 0046 00E0     		b	.L81
+ 1856              	.L84:
+ 655:../src/lcd.cpp **** 		return;
+ 1857              		.loc 1 655 0
+ 1858 0048 00BF     		nop
+ 1859              	.L81:
+ 663:../src/lcd.cpp **** }
+ 1860              		.loc 1 663 0
+ 1861 004a 80BD     		pop	{r7, pc}
+ 1862              		.cfi_endproc
+ 1863              	.LFE43:
+ 1865              		.section	.text._Z7LcdSendh10LcdCmdData,"ax",%progbits
+ 1866              		.align	2
+ 1867              		.global	_Z7LcdSendh10LcdCmdData
+ 1868              		.thumb
+ 1869              		.thumb_func
+ 1871              	_Z7LcdSendh10LcdCmdData:
+ 1872              	.LFB44:
+ 664:../src/lcd.cpp **** 
+ 665:../src/lcd.cpp **** /*
+ 666:../src/lcd.cpp ****  * Name         :  LcdSend
+ 667:../src/lcd.cpp ****  * Description  :  Sends data to display controller.
+ 668:../src/lcd.cpp ****  * Argument(s)  :  data -> Data to be sent
+ 669:../src/lcd.cpp ****  *                 cd   -> Command or data (see enum in lcd.h)
+ 670:../src/lcd.cpp ****  * Return value :  None.
+ 671:../src/lcd.cpp ****  */
+ 672:../src/lcd.cpp **** void LcdSend ( byte data, LcdCmdData cd )
+ 673:../src/lcd.cpp **** {
+ 1873              		.loc 1 673 0
+ 1874              		.cfi_startproc
+ 1875              		@ args = 0, pretend = 0, frame = 8
+ 1876              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1877 0000 80B5     		push	{r7, lr}
+ 1878              	.LCFI37:
+ 1879              		.cfi_def_cfa_offset 8
+ 1880              		.cfi_offset 14, -4
+ 1881              		.cfi_offset 7, -8
+ 1882 0002 82B0     		sub	sp, sp, #8
+ 1883              	.LCFI38:
+ 1884              		.cfi_def_cfa_offset 16
+ 1885 0004 00AF     		add	r7, sp, #0
+ 1886              	.LCFI39:
+ 1887              		.cfi_def_cfa_register 7
+ 1888 0006 0246     		mov	r2, r0
+ 1889 0008 0B46     		mov	r3, r1
+ 1890 000a FA71     		strb	r2, [r7, #7]
+ 1891 000c BB71     		strb	r3, [r7, #6]
+ 674:../src/lcd.cpp **** 	GPIO_ResetBits(LCD_GPIO, LCD_SPI_CS);
+ 1892              		.loc 1 674 0
+ 1893 000e 4FF40060 		mov	r0, #2048
+ 1894 0012 C4F20100 		movt	r0, 16385
+ 1895 0016 4FF01001 		mov	r1, #16
+ 1896 001a FFF7FEFF 		bl	GPIO_ResetBits
+ 675:../src/lcd.cpp **** 	if(cd == LCD_CMD){
+ 1897              		.loc 1 675 0
+ 1898 001e BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1899 0020 002B     		cmp	r3, #0
+ 1900 0022 07D1     		bne	.L86
+ 676:../src/lcd.cpp **** 	    GPIO_ResetBits(LCD_GPIO, LCD_DC);
+ 1901              		.loc 1 676 0
+ 1902 0024 4FF40060 		mov	r0, #2048
+ 1903 0028 C4F20100 		movt	r0, 16385
+ 1904 002c 4FF00801 		mov	r1, #8
+ 1905 0030 FFF7FEFF 		bl	GPIO_ResetBits
+ 1906              	.L86:
+ 677:../src/lcd.cpp **** 	}
+ 678:../src/lcd.cpp **** 	SPI_I2S_SendData(LCD_SPI, data);
+ 1907              		.loc 1 678 0
+ 1908 0034 FB79     		ldrb	r3, [r7, #7]	@ zero_extendqisi2
+ 1909 0036 9BB2     		uxth	r3, r3
+ 1910 0038 4FF44050 		mov	r0, #12288
+ 1911 003c C4F20100 		movt	r0, 16385
+ 1912 0040 1946     		mov	r1, r3
+ 1913 0042 FFF7FEFF 		bl	SPI_I2S_SendData
+ 679:../src/lcd.cpp **** 
+ 680:../src/lcd.cpp **** 	while(SPI_I2S_GetFlagStatus(LCD_SPI, SPI_I2S_FLAG_BSY));
+ 1914              		.loc 1 680 0
+ 1915 0046 00BF     		nop
+ 1916              	.L87:
+ 1917              		.loc 1 680 0 is_stmt 0 discriminator 1
+ 1918 0048 4FF44050 		mov	r0, #12288
+ 1919 004c C4F20100 		movt	r0, 16385
+ 1920 0050 4FF08001 		mov	r1, #128
+ 1921 0054 FFF7FEFF 		bl	SPI_I2S_GetFlagStatus
+ 1922 0058 0346     		mov	r3, r0
+ 1923 005a 002B     		cmp	r3, #0
+ 1924 005c 0CBF     		ite	eq
+ 1925 005e 0023     		moveq	r3, #0
+ 1926 0060 0123     		movne	r3, #1
+ 1927 0062 DBB2     		uxtb	r3, r3
+ 1928 0064 002B     		cmp	r3, #0
+ 1929 0066 EFD1     		bne	.L87
+ 681:../src/lcd.cpp **** 
+ 682:../src/lcd.cpp **** 	if(cd == LCD_CMD){
+ 1930              		.loc 1 682 0 is_stmt 1
+ 1931 0068 BB79     		ldrb	r3, [r7, #6]	@ zero_extendqisi2
+ 1932 006a 002B     		cmp	r3, #0
+ 1933 006c 07D1     		bne	.L88
+ 683:../src/lcd.cpp **** 	    GPIO_SetBits(LCD_GPIO, LCD_DC);
+ 1934              		.loc 1 683 0
+ 1935 006e 4FF40060 		mov	r0, #2048
+ 1936 0072 C4F20100 		movt	r0, 16385
+ 1937 0076 4FF00801 		mov	r1, #8
+ 1938 007a FFF7FEFF 		bl	GPIO_SetBits
+ 1939              	.L88:
+ 684:../src/lcd.cpp **** 	}
+ 685:../src/lcd.cpp **** 	GPIO_SetBits(LCD_GPIO, LCD_SPI_CS);
+ 1940              		.loc 1 685 0
+ 1941 007e 4FF40060 		mov	r0, #2048
+ 1942 0082 C4F20100 		movt	r0, 16385
+ 1943 0086 4FF01001 		mov	r1, #16
+ 1944 008a FFF7FEFF 		bl	GPIO_SetBits
+ 686:../src/lcd.cpp **** }
+ 1945              		.loc 1 686 0
+ 1946 008e 07F10807 		add	r7, r7, #8
+ 1947 0092 BD46     		mov	sp, r7
+ 1948 0094 80BD     		pop	{r7, pc}
+ 1949              		.cfi_endproc
+ 1950              	.LFE44:
+ 1952 0096 00BF     		.section	.text._Z14LcdSendPageDMAv,"ax",%progbits
+ 1953              		.align	2
+ 1954              		.global	_Z14LcdSendPageDMAv
+ 1955              		.thumb
+ 1956              		.thumb_func
+ 1958              	_Z14LcdSendPageDMAv:
+ 1959              	.LFB45:
+ 687:../src/lcd.cpp **** 
+ 688:../src/lcd.cpp **** /*
+ 689:../src/lcd.cpp ****  * Name         :  LcdSendPageDMA
+ 690:../src/lcd.cpp ****  * Description  :  Send page to lcd using DMA.
+ 691:../src/lcd.cpp ****  * Argument(s)  :  None.
+ 692:../src/lcd.cpp ****  * Return value :  None.
+ 693:../src/lcd.cpp ****  */
+ 694:../src/lcd.cpp **** void LcdSendPageDMA(){
+ 1960              		.loc 1 694 0
+ 1961              		.cfi_startproc
+ 1962              		@ args = 0, pretend = 0, frame = 0
+ 1963              		@ frame_needed = 1, uses_anonymous_args = 0
+ 1964 0000 80B5     		push	{r7, lr}
+ 1965              	.LCFI40:
+ 1966              		.cfi_def_cfa_offset 8
+ 1967              		.cfi_offset 14, -4
+ 1968              		.cfi_offset 7, -8
+ 1969 0002 00AF     		add	r7, sp, #0
+ 1970              	.LCFI41:
+ 1971              		.cfi_def_cfa_register 7
+ 695:../src/lcd.cpp ****     DMA_Cmd(LCD_DMA_CHANNEL, DISABLE);
+ 1972              		.loc 1 695 0
+ 1973 0004 4FF03000 		mov	r0, #48
+ 1974 0008 C4F20200 		movt	r0, 16386
+ 1975 000c 4FF00001 		mov	r1, #0
+ 1976 0010 FFF7FEFF 		bl	DMA_Cmd
+ 696:../src/lcd.cpp ****     LCD_DMA_CHANNEL->CNDTR = LCD_X_RES;
+ 1977              		.loc 1 696 0
+ 1978 0014 4FF03003 		mov	r3, #48
+ 1979 0018 C4F20203 		movt	r3, 16386
+ 1980 001c 4FF08002 		mov	r2, #128
+ 1981 0020 5A60     		str	r2, [r3, #4]
+ 697:../src/lcd.cpp ****     LCD_DMA_CHANNEL->CMAR = (uint32_t)(LcdCache + PageAddress*LCD_X_RES);
+ 1982              		.loc 1 697 0
+ 1983 0022 4FF03003 		mov	r3, #48
+ 1984 0026 C4F20203 		movt	r3, 16386
+ 1985 002a 40F20002 		movw	r2, #:lower16:PageAddress
+ 1986 002e C0F20002 		movt	r2, #:upper16:PageAddress
+ 1987 0032 1278     		ldrb	r2, [r2, #0]
+ 1988 0034 D2B2     		uxtb	r2, r2
+ 1989 0036 4FEAC212 		lsl	r2, r2, #7
+ 1990 003a 1146     		mov	r1, r2
+ 1991 003c 40F20002 		movw	r2, #:lower16:LcdCache
+ 1992 0040 C0F20002 		movt	r2, #:upper16:LcdCache
+ 1993 0044 8A18     		adds	r2, r1, r2
+ 1994 0046 DA60     		str	r2, [r3, #12]
+ 698:../src/lcd.cpp ****     //RMW
+ 699:../src/lcd.cpp ****     //LcdSend(CMD_RMW, LCD_CMD);
+ 700:../src/lcd.cpp ****     //LcdSend(0xff, LCD_DATA);
+ 701:../src/lcd.cpp **** 	GPIO_ResetBits(LCD_GPIO, LCD_SPI_CS);
+ 1995              		.loc 1 701 0
+ 1996 0048 4FF40060 		mov	r0, #2048
+ 1997 004c C4F20100 		movt	r0, 16385
+ 1998 0050 4FF01001 		mov	r1, #16
+ 1999 0054 FFF7FEFF 		bl	GPIO_ResetBits
+ 702:../src/lcd.cpp ****     DMA_Cmd(LCD_DMA_CHANNEL, ENABLE);
+ 2000              		.loc 1 702 0
+ 2001 0058 4FF03000 		mov	r0, #48
+ 2002 005c C4F20200 		movt	r0, 16386
+ 2003 0060 4FF00101 		mov	r1, #1
+ 2004 0064 FFF7FEFF 		bl	DMA_Cmd
+ 703:../src/lcd.cpp **** }
+ 2005              		.loc 1 703 0
+ 2006 0068 80BD     		pop	{r7, pc}
+ 2007              		.cfi_endproc
+ 2008              	.LFE45:
+ 2010 006a 00BF     		.section	.text._Z10LcdSetPagei,"ax",%progbits
+ 2011              		.align	2
+ 2012              		.global	_Z10LcdSetPagei
+ 2013              		.thumb
+ 2014              		.thumb_func
+ 2016              	_Z10LcdSetPagei:
+ 2017              	.LFB46:
+ 704:../src/lcd.cpp **** 
+ 705:../src/lcd.cpp **** /*
+ 706:../src/lcd.cpp ****  * Name         :  LcdSetPage
+ 707:../src/lcd.cpp ****  * Description  :  Sets page number.
+ 708:../src/lcd.cpp ****  * Argument(s)  :  pg -> Number of page to be set
+ 709:../src/lcd.cpp ****  * Return value :  None.
+ 710:../src/lcd.cpp ****  */
+ 711:../src/lcd.cpp **** void LcdSetPage(int pg){
+ 2018              		.loc 1 711 0
+ 2019              		.cfi_startproc
+ 2020              		@ args = 0, pretend = 0, frame = 8
+ 2021              		@ frame_needed = 1, uses_anonymous_args = 0
+ 2022 0000 80B5     		push	{r7, lr}
+ 2023              	.LCFI42:
+ 2024              		.cfi_def_cfa_offset 8
+ 2025              		.cfi_offset 14, -4
+ 2026              		.cfi_offset 7, -8
+ 2027 0002 82B0     		sub	sp, sp, #8
+ 2028              	.LCFI43:
+ 2029              		.cfi_def_cfa_offset 16
+ 2030 0004 00AF     		add	r7, sp, #0
+ 2031              	.LCFI44:
+ 2032              		.cfi_def_cfa_register 7
+ 2033 0006 7860     		str	r0, [r7, #4]
+ 712:../src/lcd.cpp **** 
+ 713:../src/lcd.cpp **** 	//Page
+ 714:../src/lcd.cpp **** 	LcdSend(CMD_SET_PAGE | (pg & 0xf), LCD_CMD);
+ 2034              		.loc 1 714 0
+ 2035 0008 7B68     		ldr	r3, [r7, #4]
+ 2036 000a DBB2     		uxtb	r3, r3
+ 2037 000c 03F00F03 		and	r3, r3, #15
+ 2038 0010 DBB2     		uxtb	r3, r3
+ 2039 0012 63F04F03 		orn	r3, r3, #79
+ 2040 0016 DBB2     		uxtb	r3, r3
+ 2041 0018 DBB2     		uxtb	r3, r3
+ 2042 001a 1846     		mov	r0, r3
+ 2043 001c 4FF00001 		mov	r1, #0
+ 2044 0020 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 715:../src/lcd.cpp **** 
+ 716:../src/lcd.cpp **** 	//Column 0
+ 717:../src/lcd.cpp ****     LcdSend(CMD_SET_COLUMN_LOWER, LCD_CMD);
+ 2045              		.loc 1 717 0
+ 2046 0024 4FF00000 		mov	r0, #0
+ 2047 0028 4FF00001 		mov	r1, #0
+ 2048 002c FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 718:../src/lcd.cpp ****     LcdSend(CMD_SET_COLUMN_UPPER, LCD_CMD);
+ 2049              		.loc 1 718 0
+ 2050 0030 4FF01000 		mov	r0, #16
+ 2051 0034 4FF00001 		mov	r1, #0
+ 2052 0038 FFF7FEFF 		bl	_Z7LcdSendh10LcdCmdData
+ 719:../src/lcd.cpp **** 
+ 720:../src/lcd.cpp **** }
+ 2053              		.loc 1 720 0
+ 2054 003c 07F10807 		add	r7, r7, #8
+ 2055 0040 BD46     		mov	sp, r7
+ 2056 0042 80BD     		pop	{r7, pc}
+ 2057              		.cfi_endproc
+ 2058              	.LFE46:
+ 2060              		.section	.text._Z5Delayv,"ax",%progbits
+ 2061              		.align	2
+ 2062              		.global	_Z5Delayv
+ 2063              		.thumb
+ 2064              		.thumb_func
+ 2066              	_Z5Delayv:
+ 2067              	.LFB47:
+ 721:../src/lcd.cpp **** 
+ 722:../src/lcd.cpp **** 
+ 723:../src/lcd.cpp **** /*
+ 724:../src/lcd.cpp ****  * Name         :  Delay
+ 725:../src/lcd.cpp ****  * Description  :  Uncalibrated delay for LCD init routine.
+ 726:../src/lcd.cpp ****  * Argument(s)  :  None.
+ 727:../src/lcd.cpp ****  * Return value :  None.
+ 728:../src/lcd.cpp ****  */
+ 729:../src/lcd.cpp **** void Delay ( void )
+ 730:../src/lcd.cpp **** {
+ 2068              		.loc 1 730 0
+ 2069              		.cfi_startproc
+ 2070              		@ args = 0, pretend = 0, frame = 8
+ 2071              		@ frame_needed = 1, uses_anonymous_args = 0
+ 2072              		@ link register save eliminated.
+ 2073 0000 80B4     		push	{r7}
+ 2074              	.LCFI45:
+ 2075              		.cfi_def_cfa_offset 4
+ 2076              		.cfi_offset 7, -4
+ 2077 0002 83B0     		sub	sp, sp, #12
+ 2078              	.LCFI46:
+ 2079              		.cfi_def_cfa_offset 16
+ 2080 0004 00AF     		add	r7, sp, #0
+ 2081              	.LCFI47:
+ 2082              		.cfi_def_cfa_register 7
+ 2083              	.LBB10:
+ 731:../src/lcd.cpp ****     int i;
+ 732:../src/lcd.cpp **** 
+ 733:../src/lcd.cpp ****     for ( i = -32000; i < 32000; i++ );
+ 2084              		.loc 1 733 0
+ 2085 0006 4FF40343 		mov	r3, #33536
+ 2086 000a CFF6FF73 		movt	r3, 65535
+ 2087 000e 7B60     		str	r3, [r7, #4]
+ 2088 0010 03E0     		b	.L92
+ 2089              	.L93:
+ 2090              		.loc 1 733 0 is_stmt 0 discriminator 2
+ 2091 0012 7B68     		ldr	r3, [r7, #4]
+ 2092 0014 03F10103 		add	r3, r3, #1
+ 2093 0018 7B60     		str	r3, [r7, #4]
+ 2094              	.L92:
+ 2095              		.loc 1 733 0 discriminator 1
+ 2096 001a 7A68     		ldr	r2, [r7, #4]
+ 2097 001c 47F6FF43 		movw	r3, #31999
+ 2098 0020 9A42     		cmp	r2, r3
+ 2099 0022 CCBF     		ite	gt
+ 2100 0024 0023     		movgt	r3, #0
+ 2101 0026 0123     		movle	r3, #1
+ 2102 0028 DBB2     		uxtb	r3, r3
+ 2103 002a 002B     		cmp	r3, #0
+ 2104 002c F1D1     		bne	.L93
+ 2105              	.LBE10:
+ 734:../src/lcd.cpp **** }
+ 2106              		.loc 1 734 0 is_stmt 1
+ 2107 002e 07F10C07 		add	r7, r7, #12
+ 2108 0032 BD46     		mov	sp, r7
+ 2109 0034 80BC     		pop	{r7}
+ 2110 0036 7047     		bx	lr
+ 2111              		.cfi_endproc
+ 2112              	.LFE47:
+ 2114              		.section	.text.DMA1_Channel3_IRQHandler,"ax",%progbits
+ 2115              		.align	2
+ 2116              		.global	DMA1_Channel3_IRQHandler
+ 2117              		.thumb
+ 2118              		.thumb_func
+ 2120              	DMA1_Channel3_IRQHandler:
+ 2121              	.LFB48:
+ 735:../src/lcd.cpp **** 
+ 736:../src/lcd.cpp **** 
+ 737:../src/lcd.cpp **** /*
+ 738:../src/lcd.cpp ****  * Name         :  DMA1_Channel3_IRQHandler
+ 739:../src/lcd.cpp ****  * Description  :  Routine that handles displaying next page.
+ 740:../src/lcd.cpp ****  * Argument(s)  :  None.
+ 741:../src/lcd.cpp ****  * Return value :  None.
+ 742:../src/lcd.cpp ****  */
+ 743:../src/lcd.cpp **** extern "C" {
+ 744:../src/lcd.cpp **** 
+ 745:../src/lcd.cpp **** void DMA1_Channel3_IRQHandler(void){
+ 2122              		.loc 1 745 0
+ 2123              		.cfi_startproc
+ 2124              		@ args = 0, pretend = 0, frame = 0
+ 2125              		@ frame_needed = 1, uses_anonymous_args = 0
+ 2126 0000 80B5     		push	{r7, lr}
+ 2127              	.LCFI48:
+ 2128              		.cfi_def_cfa_offset 8
+ 2129              		.cfi_offset 14, -4
+ 2130              		.cfi_offset 7, -8
+ 2131 0002 00AF     		add	r7, sp, #0
+ 2132              	.LCFI49:
+ 2133              		.cfi_def_cfa_register 7
+ 746:../src/lcd.cpp **** 	while(SPI_I2S_GetFlagStatus(LCD_SPI, SPI_I2S_FLAG_BSY));
+ 2134              		.loc 1 746 0
+ 2135 0004 00BF     		nop
+ 2136              	.L95:
+ 2137              		.loc 1 746 0 is_stmt 0 discriminator 1
+ 2138 0006 4FF44050 		mov	r0, #12288
+ 2139 000a C4F20100 		movt	r0, 16385
+ 2140 000e 4FF08001 		mov	r1, #128
+ 2141 0012 FFF7FEFF 		bl	SPI_I2S_GetFlagStatus
+ 2142 0016 0346     		mov	r3, r0
+ 2143 0018 002B     		cmp	r3, #0
+ 2144 001a 0CBF     		ite	eq
+ 2145 001c 0023     		moveq	r3, #0
+ 2146 001e 0123     		movne	r3, #1
+ 2147 0020 DBB2     		uxtb	r3, r3
+ 2148 0022 002B     		cmp	r3, #0
+ 2149 0024 EFD1     		bne	.L95
+ 747:../src/lcd.cpp **** 	GPIO_SetBits(LCD_GPIO, LCD_SPI_CS);
+ 2150              		.loc 1 747 0 is_stmt 1
+ 2151 0026 4FF40060 		mov	r0, #2048
+ 2152 002a C4F20100 		movt	r0, 16385
+ 2153 002e 4FF01001 		mov	r1, #16
+ 2154 0032 FFF7FEFF 		bl	GPIO_SetBits
+ 748:../src/lcd.cpp ****     PageAddress++;
+ 2155              		.loc 1 748 0
+ 2156 0036 40F20003 		movw	r3, #:lower16:PageAddress
+ 2157 003a C0F20003 		movt	r3, #:upper16:PageAddress
+ 2158 003e 1B78     		ldrb	r3, [r3, #0]
+ 2159 0040 DBB2     		uxtb	r3, r3
+ 2160 0042 03F10103 		add	r3, r3, #1
+ 2161 0046 DAB2     		uxtb	r2, r3
+ 2162 0048 40F20003 		movw	r3, #:lower16:PageAddress
+ 2163 004c C0F20003 		movt	r3, #:upper16:PageAddress
+ 2164 0050 1A70     		strb	r2, [r3, #0]
+ 749:../src/lcd.cpp ****     if(PageAddress >= LCD_PAGES){
+ 2165              		.loc 1 749 0
+ 2166 0052 40F20003 		movw	r3, #:lower16:PageAddress
+ 2167 0056 C0F20003 		movt	r3, #:upper16:PageAddress
+ 2168 005a 1B78     		ldrb	r3, [r3, #0]
+ 2169 005c DBB2     		uxtb	r3, r3
+ 2170 005e 072B     		cmp	r3, #7
+ 2171 0060 94BF     		ite	ls
+ 2172 0062 0023     		movls	r3, #0
+ 2173 0064 0123     		movhi	r3, #1
+ 2174 0066 DBB2     		uxtb	r3, r3
+ 2175 0068 002B     		cmp	r3, #0
+ 2176 006a 0BD0     		beq	.L96
+ 750:../src/lcd.cpp ****     	UpdateLcd = false;
+ 2177              		.loc 1 750 0
+ 2178 006c 40F20003 		movw	r3, #:lower16:UpdateLcd
+ 2179 0070 C0F20003 		movt	r3, #:upper16:UpdateLcd
+ 2180 0074 4FF00002 		mov	r2, #0
+ 2181 0078 1A70     		strb	r2, [r3, #0]
+ 751:../src/lcd.cpp ****     	DMA_ClearITPendingBit(DMA1_IT_TC3);
+ 2182              		.loc 1 751 0
+ 2183 007a 4FF40070 		mov	r0, #512
+ 2184 007e FFF7FEFF 		bl	DMA_ClearITPendingBit
+ 752:../src/lcd.cpp ****     	return;
+ 2185              		.loc 1 752 0
+ 2186 0082 0EE0     		b	.L94
+ 2187              	.L96:
+ 753:../src/lcd.cpp ****     }
+ 754:../src/lcd.cpp ****     LcdSetPage(PageAddress);
+ 2188              		.loc 1 754 0
+ 2189 0084 40F20003 		movw	r3, #:lower16:PageAddress
+ 2190 0088 C0F20003 		movt	r3, #:upper16:PageAddress
+ 2191 008c 1B78     		ldrb	r3, [r3, #0]
+ 2192 008e DBB2     		uxtb	r3, r3
+ 2193 0090 1846     		mov	r0, r3
+ 2194 0092 FFF7FEFF 		bl	_Z10LcdSetPagei
+ 755:../src/lcd.cpp ****     LcdSendPageDMA();
+ 2195              		.loc 1 755 0
+ 2196 0096 FFF7FEFF 		bl	_Z14LcdSendPageDMAv
+ 756:../src/lcd.cpp **** 	DMA_ClearITPendingBit(DMA1_IT_TC3);
+ 2197              		.loc 1 756 0
+ 2198 009a 4FF40070 		mov	r0, #512
+ 2199 009e FFF7FEFF 		bl	DMA_ClearITPendingBit
+ 2200              	.L94:
+ 757:../src/lcd.cpp **** }
+ 2201              		.loc 1 757 0
+ 2202 00a2 80BD     		pop	{r7, pc}
+ 2203              		.cfi_endproc
+ 2204              	.LFE48:
+ 2206              		.section	.rodata._ZL10FontLookup,"a",%progbits
+ 2207              		.align	2
+ 2210              	_ZL10FontLookup:
+ 2211 0000 00       		.byte	0
+ 2212 0001 00       		.byte	0
+ 2213 0002 00       		.byte	0
+ 2214 0003 00       		.byte	0
+ 2215 0004 00       		.byte	0
+ 2216 0005 00       		.byte	0
+ 2217 0006 00       		.byte	0
+ 2218 0007 2F       		.byte	47
+ 2219 0008 00       		.byte	0
+ 2220 0009 00       		.byte	0
+ 2221 000a 00       		.byte	0
+ 2222 000b 07       		.byte	7
+ 2223 000c 00       		.byte	0
+ 2224 000d 07       		.byte	7
+ 2225 000e 00       		.byte	0
+ 2226 000f 14       		.byte	20
+ 2227 0010 7F       		.byte	127
+ 2228 0011 14       		.byte	20
+ 2229 0012 7F       		.byte	127
+ 2230 0013 14       		.byte	20
+ 2231 0014 24       		.byte	36
+ 2232 0015 2A       		.byte	42
+ 2233 0016 7F       		.byte	127
+ 2234 0017 2A       		.byte	42
+ 2235 0018 12       		.byte	18
+ 2236 0019 C4       		.byte	-60
+ 2237 001a C8       		.byte	-56
+ 2238 001b 10       		.byte	16
+ 2239 001c 26       		.byte	38
+ 2240 001d 46       		.byte	70
+ 2241 001e 36       		.byte	54
+ 2242 001f 49       		.byte	73
+ 2243 0020 55       		.byte	85
+ 2244 0021 22       		.byte	34
+ 2245 0022 50       		.byte	80
+ 2246 0023 00       		.byte	0
+ 2247 0024 05       		.byte	5
+ 2248 0025 03       		.byte	3
+ 2249 0026 00       		.byte	0
+ 2250 0027 00       		.byte	0
+ 2251 0028 00       		.byte	0
+ 2252 0029 1C       		.byte	28
+ 2253 002a 22       		.byte	34
+ 2254 002b 41       		.byte	65
+ 2255 002c 00       		.byte	0
+ 2256 002d 00       		.byte	0
+ 2257 002e 41       		.byte	65
+ 2258 002f 22       		.byte	34
+ 2259 0030 1C       		.byte	28
+ 2260 0031 00       		.byte	0
+ 2261 0032 14       		.byte	20
+ 2262 0033 08       		.byte	8
+ 2263 0034 3E       		.byte	62
+ 2264 0035 08       		.byte	8
+ 2265 0036 14       		.byte	20
+ 2266 0037 08       		.byte	8
+ 2267 0038 08       		.byte	8
+ 2268 0039 3E       		.byte	62
+ 2269 003a 08       		.byte	8
+ 2270 003b 08       		.byte	8
+ 2271 003c 00       		.byte	0
+ 2272 003d 00       		.byte	0
+ 2273 003e 50       		.byte	80
+ 2274 003f 30       		.byte	48
+ 2275 0040 00       		.byte	0
+ 2276 0041 10       		.byte	16
+ 2277 0042 10       		.byte	16
+ 2278 0043 10       		.byte	16
+ 2279 0044 10       		.byte	16
+ 2280 0045 10       		.byte	16
+ 2281 0046 00       		.byte	0
+ 2282 0047 60       		.byte	96
+ 2283 0048 60       		.byte	96
+ 2284 0049 00       		.byte	0
+ 2285 004a 00       		.byte	0
+ 2286 004b 20       		.byte	32
+ 2287 004c 10       		.byte	16
+ 2288 004d 08       		.byte	8
+ 2289 004e 04       		.byte	4
+ 2290 004f 02       		.byte	2
+ 2291 0050 3E       		.byte	62
+ 2292 0051 51       		.byte	81
+ 2293 0052 49       		.byte	73
+ 2294 0053 45       		.byte	69
+ 2295 0054 3E       		.byte	62
+ 2296 0055 00       		.byte	0
+ 2297 0056 42       		.byte	66
+ 2298 0057 7F       		.byte	127
+ 2299 0058 40       		.byte	64
+ 2300 0059 00       		.byte	0
+ 2301 005a 42       		.byte	66
+ 2302 005b 61       		.byte	97
+ 2303 005c 51       		.byte	81
+ 2304 005d 49       		.byte	73
+ 2305 005e 46       		.byte	70
+ 2306 005f 21       		.byte	33
+ 2307 0060 41       		.byte	65
+ 2308 0061 45       		.byte	69
+ 2309 0062 4B       		.byte	75
+ 2310 0063 31       		.byte	49
+ 2311 0064 18       		.byte	24
+ 2312 0065 14       		.byte	20
+ 2313 0066 12       		.byte	18
+ 2314 0067 7F       		.byte	127
+ 2315 0068 10       		.byte	16
+ 2316 0069 27       		.byte	39
+ 2317 006a 45       		.byte	69
+ 2318 006b 45       		.byte	69
+ 2319 006c 45       		.byte	69
+ 2320 006d 39       		.byte	57
+ 2321 006e 3C       		.byte	60
+ 2322 006f 4A       		.byte	74
+ 2323 0070 49       		.byte	73
+ 2324 0071 49       		.byte	73
+ 2325 0072 30       		.byte	48
+ 2326 0073 01       		.byte	1
+ 2327 0074 71       		.byte	113
+ 2328 0075 09       		.byte	9
+ 2329 0076 05       		.byte	5
+ 2330 0077 03       		.byte	3
+ 2331 0078 36       		.byte	54
+ 2332 0079 49       		.byte	73
+ 2333 007a 49       		.byte	73
+ 2334 007b 49       		.byte	73
+ 2335 007c 36       		.byte	54
+ 2336 007d 06       		.byte	6
+ 2337 007e 49       		.byte	73
+ 2338 007f 49       		.byte	73
+ 2339 0080 29       		.byte	41
+ 2340 0081 1E       		.byte	30
+ 2341 0082 00       		.byte	0
+ 2342 0083 36       		.byte	54
+ 2343 0084 36       		.byte	54
+ 2344 0085 00       		.byte	0
+ 2345 0086 00       		.byte	0
+ 2346 0087 00       		.byte	0
+ 2347 0088 56       		.byte	86
+ 2348 0089 36       		.byte	54
+ 2349 008a 00       		.byte	0
+ 2350 008b 00       		.byte	0
+ 2351 008c 08       		.byte	8
+ 2352 008d 14       		.byte	20
+ 2353 008e 22       		.byte	34
+ 2354 008f 41       		.byte	65
+ 2355 0090 00       		.byte	0
+ 2356 0091 14       		.byte	20
+ 2357 0092 14       		.byte	20
+ 2358 0093 14       		.byte	20
+ 2359 0094 14       		.byte	20
+ 2360 0095 14       		.byte	20
+ 2361 0096 00       		.byte	0
+ 2362 0097 41       		.byte	65
+ 2363 0098 22       		.byte	34
+ 2364 0099 14       		.byte	20
+ 2365 009a 08       		.byte	8
+ 2366 009b 02       		.byte	2
+ 2367 009c 01       		.byte	1
+ 2368 009d 51       		.byte	81
+ 2369 009e 09       		.byte	9
+ 2370 009f 06       		.byte	6
+ 2371 00a0 32       		.byte	50
+ 2372 00a1 49       		.byte	73
+ 2373 00a2 59       		.byte	89
+ 2374 00a3 51       		.byte	81
+ 2375 00a4 3E       		.byte	62
+ 2376 00a5 7E       		.byte	126
+ 2377 00a6 11       		.byte	17
+ 2378 00a7 11       		.byte	17
+ 2379 00a8 11       		.byte	17
+ 2380 00a9 7E       		.byte	126
+ 2381 00aa 7F       		.byte	127
+ 2382 00ab 49       		.byte	73
+ 2383 00ac 49       		.byte	73
+ 2384 00ad 49       		.byte	73
+ 2385 00ae 36       		.byte	54
+ 2386 00af 3E       		.byte	62
+ 2387 00b0 41       		.byte	65
+ 2388 00b1 41       		.byte	65
+ 2389 00b2 41       		.byte	65
+ 2390 00b3 22       		.byte	34
+ 2391 00b4 7F       		.byte	127
+ 2392 00b5 41       		.byte	65
+ 2393 00b6 41       		.byte	65
+ 2394 00b7 22       		.byte	34
+ 2395 00b8 1C       		.byte	28
+ 2396 00b9 7F       		.byte	127
+ 2397 00ba 49       		.byte	73
+ 2398 00bb 49       		.byte	73
+ 2399 00bc 49       		.byte	73
+ 2400 00bd 41       		.byte	65
+ 2401 00be 7F       		.byte	127
+ 2402 00bf 09       		.byte	9
+ 2403 00c0 09       		.byte	9
+ 2404 00c1 09       		.byte	9
+ 2405 00c2 01       		.byte	1
+ 2406 00c3 3E       		.byte	62
+ 2407 00c4 41       		.byte	65
+ 2408 00c5 49       		.byte	73
+ 2409 00c6 49       		.byte	73
+ 2410 00c7 7A       		.byte	122
+ 2411 00c8 7F       		.byte	127
+ 2412 00c9 08       		.byte	8
+ 2413 00ca 08       		.byte	8
+ 2414 00cb 08       		.byte	8
+ 2415 00cc 7F       		.byte	127
+ 2416 00cd 00       		.byte	0
+ 2417 00ce 41       		.byte	65
+ 2418 00cf 7F       		.byte	127
+ 2419 00d0 41       		.byte	65
+ 2420 00d1 00       		.byte	0
+ 2421 00d2 20       		.byte	32
+ 2422 00d3 40       		.byte	64
+ 2423 00d4 41       		.byte	65
+ 2424 00d5 3F       		.byte	63
+ 2425 00d6 01       		.byte	1
+ 2426 00d7 7F       		.byte	127
+ 2427 00d8 08       		.byte	8
+ 2428 00d9 14       		.byte	20
+ 2429 00da 22       		.byte	34
+ 2430 00db 41       		.byte	65
+ 2431 00dc 7F       		.byte	127
+ 2432 00dd 40       		.byte	64
+ 2433 00de 40       		.byte	64
+ 2434 00df 40       		.byte	64
+ 2435 00e0 40       		.byte	64
+ 2436 00e1 7F       		.byte	127
+ 2437 00e2 02       		.byte	2
+ 2438 00e3 0C       		.byte	12
+ 2439 00e4 02       		.byte	2
+ 2440 00e5 7F       		.byte	127
+ 2441 00e6 7F       		.byte	127
+ 2442 00e7 04       		.byte	4
+ 2443 00e8 08       		.byte	8
+ 2444 00e9 10       		.byte	16
+ 2445 00ea 7F       		.byte	127
+ 2446 00eb 3E       		.byte	62
+ 2447 00ec 41       		.byte	65
+ 2448 00ed 41       		.byte	65
+ 2449 00ee 41       		.byte	65
+ 2450 00ef 3E       		.byte	62
+ 2451 00f0 7F       		.byte	127
+ 2452 00f1 09       		.byte	9
+ 2453 00f2 09       		.byte	9
+ 2454 00f3 09       		.byte	9
+ 2455 00f4 06       		.byte	6
+ 2456 00f5 3E       		.byte	62
+ 2457 00f6 41       		.byte	65
+ 2458 00f7 51       		.byte	81
+ 2459 00f8 21       		.byte	33
+ 2460 00f9 5E       		.byte	94
+ 2461 00fa 7F       		.byte	127
+ 2462 00fb 09       		.byte	9
+ 2463 00fc 19       		.byte	25
+ 2464 00fd 29       		.byte	41
+ 2465 00fe 46       		.byte	70
+ 2466 00ff 46       		.byte	70
+ 2467 0100 49       		.byte	73
+ 2468 0101 49       		.byte	73
+ 2469 0102 49       		.byte	73
+ 2470 0103 31       		.byte	49
+ 2471 0104 01       		.byte	1
+ 2472 0105 01       		.byte	1
+ 2473 0106 7F       		.byte	127
+ 2474 0107 01       		.byte	1
+ 2475 0108 01       		.byte	1
+ 2476 0109 3F       		.byte	63
+ 2477 010a 40       		.byte	64
+ 2478 010b 40       		.byte	64
+ 2479 010c 40       		.byte	64
+ 2480 010d 3F       		.byte	63
+ 2481 010e 1F       		.byte	31
+ 2482 010f 20       		.byte	32
+ 2483 0110 40       		.byte	64
+ 2484 0111 20       		.byte	32
+ 2485 0112 1F       		.byte	31
+ 2486 0113 3F       		.byte	63
+ 2487 0114 40       		.byte	64
+ 2488 0115 38       		.byte	56
+ 2489 0116 40       		.byte	64
+ 2490 0117 3F       		.byte	63
+ 2491 0118 63       		.byte	99
+ 2492 0119 14       		.byte	20
+ 2493 011a 08       		.byte	8
+ 2494 011b 14       		.byte	20
+ 2495 011c 63       		.byte	99
+ 2496 011d 07       		.byte	7
+ 2497 011e 08       		.byte	8
+ 2498 011f 70       		.byte	112
+ 2499 0120 08       		.byte	8
+ 2500 0121 07       		.byte	7
+ 2501 0122 61       		.byte	97
+ 2502 0123 51       		.byte	81
+ 2503 0124 49       		.byte	73
+ 2504 0125 45       		.byte	69
+ 2505 0126 43       		.byte	67
+ 2506 0127 00       		.byte	0
+ 2507 0128 7F       		.byte	127
+ 2508 0129 41       		.byte	65
+ 2509 012a 41       		.byte	65
+ 2510 012b 00       		.byte	0
+ 2511 012c 55       		.byte	85
+ 2512 012d 2A       		.byte	42
+ 2513 012e 55       		.byte	85
+ 2514 012f 2A       		.byte	42
+ 2515 0130 55       		.byte	85
+ 2516 0131 00       		.byte	0
+ 2517 0132 41       		.byte	65
+ 2518 0133 41       		.byte	65
+ 2519 0134 7F       		.byte	127
+ 2520 0135 00       		.byte	0
+ 2521 0136 04       		.byte	4
+ 2522 0137 02       		.byte	2
+ 2523 0138 01       		.byte	1
+ 2524 0139 02       		.byte	2
+ 2525 013a 04       		.byte	4
+ 2526 013b 40       		.byte	64
+ 2527 013c 40       		.byte	64
+ 2528 013d 40       		.byte	64
+ 2529 013e 40       		.byte	64
+ 2530 013f 40       		.byte	64
+ 2531 0140 00       		.byte	0
+ 2532 0141 01       		.byte	1
+ 2533 0142 02       		.byte	2
+ 2534 0143 04       		.byte	4
+ 2535 0144 00       		.byte	0
+ 2536 0145 20       		.byte	32
+ 2537 0146 54       		.byte	84
+ 2538 0147 54       		.byte	84
+ 2539 0148 54       		.byte	84
+ 2540 0149 78       		.byte	120
+ 2541 014a 7F       		.byte	127
+ 2542 014b 48       		.byte	72
+ 2543 014c 44       		.byte	68
+ 2544 014d 44       		.byte	68
+ 2545 014e 38       		.byte	56
+ 2546 014f 38       		.byte	56
+ 2547 0150 44       		.byte	68
+ 2548 0151 44       		.byte	68
+ 2549 0152 44       		.byte	68
+ 2550 0153 20       		.byte	32
+ 2551 0154 38       		.byte	56
+ 2552 0155 44       		.byte	68
+ 2553 0156 44       		.byte	68
+ 2554 0157 48       		.byte	72
+ 2555 0158 7F       		.byte	127
+ 2556 0159 38       		.byte	56
+ 2557 015a 54       		.byte	84
+ 2558 015b 54       		.byte	84
+ 2559 015c 54       		.byte	84
+ 2560 015d 18       		.byte	24
+ 2561 015e 08       		.byte	8
+ 2562 015f 7E       		.byte	126
+ 2563 0160 09       		.byte	9
+ 2564 0161 01       		.byte	1
+ 2565 0162 02       		.byte	2
+ 2566 0163 0C       		.byte	12
+ 2567 0164 52       		.byte	82
+ 2568 0165 52       		.byte	82
+ 2569 0166 52       		.byte	82
+ 2570 0167 3E       		.byte	62
+ 2571 0168 7F       		.byte	127
+ 2572 0169 08       		.byte	8
+ 2573 016a 04       		.byte	4
+ 2574 016b 04       		.byte	4
+ 2575 016c 78       		.byte	120
+ 2576 016d 00       		.byte	0
+ 2577 016e 44       		.byte	68
+ 2578 016f 7D       		.byte	125
+ 2579 0170 40       		.byte	64
+ 2580 0171 00       		.byte	0
+ 2581 0172 20       		.byte	32
+ 2582 0173 40       		.byte	64
+ 2583 0174 44       		.byte	68
+ 2584 0175 3D       		.byte	61
+ 2585 0176 00       		.byte	0
+ 2586 0177 7F       		.byte	127
+ 2587 0178 10       		.byte	16
+ 2588 0179 28       		.byte	40
+ 2589 017a 44       		.byte	68
+ 2590 017b 00       		.byte	0
+ 2591 017c 00       		.byte	0
+ 2592 017d 41       		.byte	65
+ 2593 017e 7F       		.byte	127
+ 2594 017f 40       		.byte	64
+ 2595 0180 00       		.byte	0
+ 2596 0181 7C       		.byte	124
+ 2597 0182 04       		.byte	4
+ 2598 0183 18       		.byte	24
+ 2599 0184 04       		.byte	4
+ 2600 0185 78       		.byte	120
+ 2601 0186 7C       		.byte	124
+ 2602 0187 08       		.byte	8
+ 2603 0188 04       		.byte	4
+ 2604 0189 04       		.byte	4
+ 2605 018a 78       		.byte	120
+ 2606 018b 38       		.byte	56
+ 2607 018c 44       		.byte	68
+ 2608 018d 44       		.byte	68
+ 2609 018e 44       		.byte	68
+ 2610 018f 38       		.byte	56
+ 2611 0190 7C       		.byte	124
+ 2612 0191 14       		.byte	20
+ 2613 0192 14       		.byte	20
+ 2614 0193 14       		.byte	20
+ 2615 0194 08       		.byte	8
+ 2616 0195 08       		.byte	8
+ 2617 0196 14       		.byte	20
+ 2618 0197 14       		.byte	20
+ 2619 0198 18       		.byte	24
+ 2620 0199 7C       		.byte	124
+ 2621 019a 7C       		.byte	124
+ 2622 019b 08       		.byte	8
+ 2623 019c 04       		.byte	4
+ 2624 019d 04       		.byte	4
+ 2625 019e 08       		.byte	8
+ 2626 019f 48       		.byte	72
+ 2627 01a0 54       		.byte	84
+ 2628 01a1 54       		.byte	84
+ 2629 01a2 54       		.byte	84
+ 2630 01a3 20       		.byte	32
+ 2631 01a4 04       		.byte	4
+ 2632 01a5 3F       		.byte	63
+ 2633 01a6 44       		.byte	68
+ 2634 01a7 40       		.byte	64
+ 2635 01a8 20       		.byte	32
+ 2636 01a9 3C       		.byte	60
+ 2637 01aa 40       		.byte	64
+ 2638 01ab 40       		.byte	64
+ 2639 01ac 20       		.byte	32
+ 2640 01ad 7C       		.byte	124
+ 2641 01ae 1C       		.byte	28
+ 2642 01af 20       		.byte	32
+ 2643 01b0 40       		.byte	64
+ 2644 01b1 20       		.byte	32
+ 2645 01b2 1C       		.byte	28
+ 2646 01b3 3C       		.byte	60
+ 2647 01b4 40       		.byte	64
+ 2648 01b5 30       		.byte	48
+ 2649 01b6 40       		.byte	64
+ 2650 01b7 3C       		.byte	60
+ 2651 01b8 44       		.byte	68
+ 2652 01b9 28       		.byte	40
+ 2653 01ba 10       		.byte	16
+ 2654 01bb 28       		.byte	40
+ 2655 01bc 44       		.byte	68
+ 2656 01bd 0C       		.byte	12
+ 2657 01be 50       		.byte	80
+ 2658 01bf 50       		.byte	80
+ 2659 01c0 50       		.byte	80
+ 2660 01c1 3C       		.byte	60
+ 2661 01c2 44       		.byte	68
+ 2662 01c3 64       		.byte	100
+ 2663 01c4 54       		.byte	84
+ 2664 01c5 4C       		.byte	76
+ 2665 01c6 44       		.byte	68
+ 2666 01c7 00       		.text
+ 2667              	.Letext0:
+ 2668              		.file 2 "../src/lcd.h"
+ 2669              		.file 3 "/home/jachu/workspaceSTM/Sumo_STM/src/stm32f10x.h"
+ 2670              		.file 4 "/home/jachu/elektronika/STM32/gcc-arm-none-eabi-4_6-2012q4/bin/../lib/gcc/arm-none-eabi/4
+ 2671              		.file 5 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPerip
+ 2672              		.file 6 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPerip
+ 2673              		.file 7 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPerip
+ 2674              		.file 8 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPerip
+ 2675              		.file 9 "/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupp
+DEFINED SYMBOLS
+                            *ABS*:00000000 lcd.cpp
+     /tmp/cchTpHbv.s:23     .bss.LcdCache:00000000 LcdCache
+     /tmp/cchTpHbv.s:20     .bss.LcdCache:00000000 $d
+     /tmp/cchTpHbv.s:30     .bss.LcdCacheIdx:00000000 LcdCacheIdx
+     /tmp/cchTpHbv.s:27     .bss.LcdCacheIdx:00000000 $d
+     /tmp/cchTpHbv.s:37     .bss.LoWaterMark:00000000 LoWaterMark
+     /tmp/cchTpHbv.s:34     .bss.LoWaterMark:00000000 $d
+     /tmp/cchTpHbv.s:44     .bss.HiWaterMark:00000000 HiWaterMark
+     /tmp/cchTpHbv.s:41     .bss.HiWaterMark:00000000 $d
+     /tmp/cchTpHbv.s:50     .bss.UpdateLcd:00000000 UpdateLcd
+     /tmp/cchTpHbv.s:51     .bss.UpdateLcd:00000000 $d
+     /tmp/cchTpHbv.s:56     .bss.PageAddress:00000000 PageAddress
+     /tmp/cchTpHbv.s:57     .bss.PageAddress:00000000 $d
+     /tmp/cchTpHbv.s:59     .text._Z7LcdInitv:00000000 $t
+     /tmp/cchTpHbv.s:64     .text._Z7LcdInitv:00000000 _Z7LcdInitv
+     /tmp/cchTpHbv.s:1871   .text._Z7LcdSendh10LcdCmdData:00000000 _Z7LcdSendh10LcdCmdData
+     /tmp/cchTpHbv.s:393    .text._Z8LcdClearv:00000000 _Z8LcdClearv
+     /tmp/cchTpHbv.s:341    .text._Z11LcdContrasth:00000000 $t
+     /tmp/cchTpHbv.s:346    .text._Z11LcdContrasth:00000000 _Z11LcdContrasth
+     /tmp/cchTpHbv.s:388    .text._Z8LcdClearv:00000000 $t
+     /tmp/cchTpHbv.s:432    .text._Z13LcdGotoXYFonthh:00000000 $t
+     /tmp/cchTpHbv.s:437    .text._Z13LcdGotoXYFonthh:00000000 _Z13LcdGotoXYFonthh
+     /tmp/cchTpHbv.s:502    .text._Z6LcdChr11LcdFontSizeh:00000000 $t
+     /tmp/cchTpHbv.s:507    .text._Z6LcdChr11LcdFontSizeh:00000000 _Z6LcdChr11LcdFontSizeh
+     /tmp/cchTpHbv.s:2210   .rodata._ZL10FontLookup:00000000 _ZL10FontLookup
+     /tmp/cchTpHbv.s:895    .text._Z6LcdStr11LcdFontSizePKh:00000000 $t
+     /tmp/cchTpHbv.s:900    .text._Z6LcdStr11LcdFontSizePKh:00000000 _Z6LcdStr11LcdFontSizePKh
+     /tmp/cchTpHbv.s:976    .text._Z8LcdPixelhh12LcdPixelMode:00000000 $t
+     /tmp/cchTpHbv.s:981    .text._Z8LcdPixelhh12LcdPixelMode:00000000 _Z8LcdPixelhh12LcdPixelMode
+     /tmp/cchTpHbv.s:1147   .text._Z7LcdLinehhhh12LcdPixelMode:00000000 $t
+     /tmp/cchTpHbv.s:1152   .text._Z7LcdLinehhhh12LcdPixelMode:00000000 _Z7LcdLinehhhh12LcdPixelMode
+     /tmp/cchTpHbv.s:1394   .text._Z12LcdSingleBarhhhh12LcdPixelMode:00000000 $t
+     /tmp/cchTpHbv.s:1399   .text._Z12LcdSingleBarhhhh12LcdPixelMode:00000000 _Z12LcdSingleBarhhhh12LcdPixelMode
+     /tmp/cchTpHbv.s:1523   .text._Z7LcdBarsPhhhh:00000000 $t
+     /tmp/cchTpHbv.s:1528   .text._Z7LcdBarsPhhhh:00000000 _Z7LcdBarsPhhhh
+     /tmp/cchTpHbv.s:1628   .text._Z7LcdRecthhhh12LcdPixelMode:00000000 $t
+     /tmp/cchTpHbv.s:1633   .text._Z7LcdRecthhhh12LcdPixelMode:00000000 _Z7LcdRecthhhh12LcdPixelMode
+     /tmp/cchTpHbv.s:1758   .text._Z8LcdImagePKh:00000000 $t
+     /tmp/cchTpHbv.s:1763   .text._Z8LcdImagePKh:00000000 _Z8LcdImagePKh
+     /tmp/cchTpHbv.s:1809   .text._Z9LcdUpdatev:00000000 $t
+     /tmp/cchTpHbv.s:1814   .text._Z9LcdUpdatev:00000000 _Z9LcdUpdatev
+     /tmp/cchTpHbv.s:2016   .text._Z10LcdSetPagei:00000000 _Z10LcdSetPagei
+     /tmp/cchTpHbv.s:1958   .text._Z14LcdSendPageDMAv:00000000 _Z14LcdSendPageDMAv
+     /tmp/cchTpHbv.s:1866   .text._Z7LcdSendh10LcdCmdData:00000000 $t
+     /tmp/cchTpHbv.s:1953   .text._Z14LcdSendPageDMAv:00000000 $t
+     /tmp/cchTpHbv.s:2011   .text._Z10LcdSetPagei:00000000 $t
+     /tmp/cchTpHbv.s:2061   .text._Z5Delayv:00000000 $t
+     /tmp/cchTpHbv.s:2066   .text._Z5Delayv:00000000 _Z5Delayv
+     /tmp/cchTpHbv.s:2115   .text.DMA1_Channel3_IRQHandler:00000000 $t
+     /tmp/cchTpHbv.s:2120   .text.DMA1_Channel3_IRQHandler:00000000 DMA1_Channel3_IRQHandler
+     /tmp/cchTpHbv.s:2207   .rodata._ZL10FontLookup:00000000 $d
+                     .debug_frame:00000010 $d
+
+UNDEFINED SYMBOLS
+RCC_APB2PeriphClockCmd
+GPIO_Init
+SPI_Init
+SPI_SSOutputCmd
+RCC_AHBPeriphClockCmd
+DMA_Init
+DMA_ITConfig
+NVIC_Init
+SPI_I2S_DMACmd
+SPI_Cmd
+GPIO_ResetBits
+_Z10sysDelayMsj
+GPIO_SetBits
+memset
+memcpy
+SPI_I2S_SendData
+SPI_I2S_GetFlagStatus
+DMA_Cmd
+DMA_ClearITPendingBit
