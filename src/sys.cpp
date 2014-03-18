@@ -11,6 +11,7 @@
 #include "led.h"
 #include "adc.h"
 #include "lcd.h"
+#include "buttons.h"
 
 volatile unsigned int del;
 volatile bool lcdEnable;
@@ -20,7 +21,8 @@ void sysInit(){
 	ledInit();
 	//ctrlInit();
 	motorInit(1, 2, 0, 64*19);
-	//adcInit();
+	adcInit();
+	buttonsInit();
 	SysTick_Config(SystemCoreClock / SYS_freq);
 	LcdInit();
 	lcdEnable = true;
@@ -107,6 +109,10 @@ uint8_t atoui(uint32_t* num, char* buffer){
 	return pos;
 }
 
+uint32_t min(uint32_t a, uint32_t b){
+	return a <= b ? a : b;
+}
+
 
 uint8_t strcmpLen(const char* str1, const char* str2, uint16_t len){
 	for(uint16_t i = 0; i < len; i++){
@@ -131,9 +137,12 @@ void SysTick_Handler(void){
 		motorPID(Left);
 		motorPID(Right);
 	}
-	/*if(cnt % (uint16_t)(SYS_freq/ADC_freq) == 0){
+	if(cnt % (uint16_t)(SYS_freq/ADC_freq) == 0){
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
-	}*/
+	}
+	if(cnt % (uint16_t)(SYS_freq/BUTTONS_freq) == 0){
+		buttonsSys();
+	}
 	if(cnt % (uint16_t)(SYS_freq/PID_freq) == 0 && lcdEnable == true){
 		LcdUpdate();
 	}

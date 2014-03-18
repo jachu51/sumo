@@ -10,36 +10,41 @@
 
 #include <stm32f10x_dma.h>
 
-extern volatile float curMean;
-extern volatile float emfMean;
-extern volatile float motVMean;
+enum Sharps{
+	ShFrontLeft = 0,
+	ShFrontRight = 1,
+	ShRearLeft = 2,
+	ShRearRight = 3
+};
 
-#define CUR_PIN GPIO_Pin_0
-#define CUR_CHANNEL ADC_Channel_0
-#define CUR_RANK 1
-#define CUR_MUL (3.3/20.0/0.025/4096*0.827586)
+extern volatile float sharpMean[4];
 
-#define EMF_POS_PIN GPIO_Pin_1
-#define EMF_POS_CHANNEL ADC_Channel_1
-#define EMF_POS_RANK 2
 
-#define EMF_NEG_PIN GPIO_Pin_2
-#define EMF_NEG_CHANNEL ADC_Channel_2
-#define EMF_NEG_RANK 3
-#define EMF_MUL (1.0)
+static const uint16_t sharpPins[] = {	GPIO_Pin_0,
+										GPIO_Pin_1,
+										GPIO_Pin_2,
+										GPIO_Pin_3};
 
-#define MOT_V_PIN GPIO_Pin_3
-#define MOT_V_CHANNEL ADC_Channel_3
-#define MOT_V_RANK 4
-#define MOT_V_MUL (3.3*(27.0 + 2.4)/2.4/4096*0.962963)
+static const uint8_t sharpChannels[] = {	ADC_Channel_10,
+											ADC_Channel_11,
+											ADC_Channel_12,
+											ADC_Channel_13};
+
+static const uint8_t sharpRanks[] = {1, 2, 3, 4};
+
+static const float sharpMul[] = {	3.3/4096,
+									3.3/4096,
+									3.3/4096,
+									3.3/4096};
+
+#define SHARP_PORT GPIOC
 
 #define ADC_DMA_CHANNEL DMA1_Channel1
-#define ADC_NSAMP_MEAN 100
+#define ADC_NSAMP_MEAN 4
 
 void adcInit();
-float adcCurMeas();
-float adcEmfMeas();
-float adcMotSupplyMeas();
+float adcSharpVol(Sharps sharp);
+int32_t adcSharpDist(Sharps sharp);
 
 extern "C" {
 

@@ -5,9 +5,13 @@
  *      Author: jachu
  */
 
+#include <string.h>
 #include "menu.h"
 #include "lcd.h"
-#include <string.h>
+#include "buttons.h"
+#include "lineDet.h"
+#include "sys.h"
+#include "adc.h"
 
 #define LCD_ROWS 6
 #define LCD_COLS 14
@@ -29,10 +33,87 @@ void testFunc(void){
 
 }
 
+void testLineDet(void){
+	while(isPushed[LEFT_BUT] == 0){
+		LcdClear();
+		static const byte rectA = 10;
+		static const byte frontLeftRect[][2] = {{0, 0},
+												{rectA-1, rectA-1}};
+		static const byte frontRightRect[][2] = {{0, LCD_Y_RES-rectA},
+												{rectA-1, LCD_Y_RES-1}};
+		static const byte rearLeftRect[][2] = {{LCD_X_RES-rectA, 0},
+												{LCD_X_RES-1, rectA-1}};
+		static const byte rearRightRect[][2] = {{LCD_X_RES-rectA, LCD_Y_RES-rectA},
+												{LCD_X_RES-1, LCD_Y_RES-1}};
+		if(lineDetCheck(DetFrontLeft)){
+			LcdSingleBar(	frontLeftRect[0][0],
+							frontLeftRect[0][1],
+							frontLeftRect[1][0]-frontLeftRect[0][0],
+							frontLeftRect[1][1]-frontLeftRect[0][1],
+							PIXEL_ON);
+		}
+		else{
+			LcdRect(frontLeftRect[0][0],
+					frontLeftRect[1][0],
+					frontLeftRect[0][1],
+					frontLeftRect[1][1],
+					PIXEL_ON);
+		}
+		sysDelayMs(100);
+	}
+	isPushed[LEFT_BUT] = 0;
+}
+
+void testSharps(void){
+	while(isPushed[LEFT_BUT] == 0){
+		LcdClear();
+
+		LcdGotoXYFont(1, 1);
+		LcdStr(FONT_1X, (const unsigned char*)"Sharp FL: ");
+		char buffer[20];
+		uint32_t dist = adcSharpDist(ShFrontLeft);
+		int pos = uitoa(dist, buffer, 10);
+		buffer[pos] = 0;
+		LcdStr(FONT_1X, (const unsigned char*)buffer);
+		LcdStr(FONT_1X, (const unsigned char*)"mm");
+
+		LcdGotoXYFont(1, 2);
+		LcdStr(FONT_1X, (const unsigned char*)"Sharp FR: ");
+		dist = adcSharpDist(ShFrontRight);
+		pos = uitoa(dist, buffer, 10);
+		buffer[pos] = 0;
+		LcdStr(FONT_1X, (const unsigned char*)buffer);
+		LcdStr(FONT_1X, (const unsigned char*)"mm");
+
+		LcdGotoXYFont(1, 3);
+		LcdStr(FONT_1X, (const unsigned char*)"Sharp RL: ");
+		dist = adcSharpDist(ShRearLeft);
+		pos = uitoa(dist, buffer, 10);
+		buffer[pos] = 0;
+		LcdStr(FONT_1X, (const unsigned char*)buffer);
+		LcdStr(FONT_1X, (const unsigned char*)"mm");
+
+		LcdGotoXYFont(1, 4);
+		LcdStr(FONT_1X, (const unsigned char*)"Sharp RR: ");
+		dist = adcSharpDist(ShRearRight);
+		pos = uitoa(dist, buffer, 10);
+		buffer[pos] = 0;
+		LcdStr(FONT_1X, (const unsigned char*)buffer);
+		LcdStr(FONT_1X, (const unsigned char*)"mm");
+
+		sysDelayMs(100);
+	}
+	isPushed[LEFT_BUT] = 0;
+}
+
+void testMotors(void){
+
+}
+
 MenuEntry testsLevel[] = {
-		{testsMenu1, sizeof(testsMenu1) - 1, 0, 0, testFunc},
-		{testsMenu1, sizeof(testsMenu2) - 1, 0, 0, testFunc},
-		{testsMenu1, sizeof(testsMenu3) - 1, 0, 0, testFunc},
+		{testsMenu1, sizeof(testsMenu1) - 1, 0, 0, testSharps},
+		{testsMenu2, sizeof(testsMenu2) - 1, 0, 0, testLineDet},
+		{testsMenu3, sizeof(testsMenu3) - 1, 0, 0, testMotors},
 };
 
 MenuEntry mainLevel[] = {
@@ -42,7 +123,7 @@ MenuEntry mainLevel[] = {
 
 
 
-uint8_t mainLevelSize = 3;
+uint8_t mainLevelSize = 2;
 
 uint8_t numEntryRows(uint8_t len){
 	return (uint8_t)(((int8_t)len - 2 - 1)/(LCD_COLS - 2) + 1);
@@ -85,7 +166,7 @@ uint8_t redrawMenu(MenuEntry* curLevel, uint8_t topEntry, uint8_t activeEntry, u
 }
 
 void displayMenu(MenuEntry* curLevel, uint8_t size){
-	/*uint8_t activeEntry = 0;
+	uint8_t activeEntry = 0;
 	uint8_t topEntry = 0;
 	uint8_t bottomEntry = redrawMenu(curLevel, topEntry, activeEntry, size);
 	while(1){
@@ -97,9 +178,9 @@ void displayMenu(MenuEntry* curLevel, uint8_t size){
 			else{
 				activeEntry++;
 				if(activeEntry > bottomEntry){
-					int8_t lines = numEntryRows(pgm_read_byte(&(curLevel[activeEntry].len)));
+					int8_t lines = numEntryRows(curLevel[activeEntry].len);
 					while(lines > 0){
-						lines -= numEntryRows(pgm_read_byte(&(curLevel[topEntry++].len)));
+						lines -= numEntryRows(curLevel[topEntry++].len);
 					}
 				}
 			}
@@ -111,7 +192,7 @@ void displayMenu(MenuEntry* curLevel, uint8_t size){
 				activeEntry = topEntry = size - 1;
 				uint8_t lines = 0;
 				while(lines < LCD_ROWS){
-					lines += numEntryRows(pgm_read_byte(&(curLevel[topEntry--].len)));
+					lines += numEntryRows(curLevel[topEntry--].len);
 				}
 				topEntry++;
 				if(lines > LCD_ROWS){
@@ -128,20 +209,20 @@ void displayMenu(MenuEntry* curLevel, uint8_t size){
 			isPushed[UP_BUT] = 0;
 		}
 		if(isPushed[RIGHT_BUT] == 1){
-			if(pgm_read_word(&(curLevel[activeEntry].function)) != NULL){
-				((voidFunc)pgm_read_word(&(curLevel[activeEntry].function)))();
+			isPushed[RIGHT_BUT] = 0;
+			if(curLevel[activeEntry].function != NULL){
+				((voidFunc)curLevel[activeEntry].function)();
 			}
-			if(pgm_read_word(&(curLevel[activeEntry].nextLevel)) != NULL){
-				displayMenu((MenuEntry*)pgm_read_word(&(curLevel[activeEntry].nextLevel)), 1);	//! POPRAWIC!!!!!!!!!!
+			if(curLevel[activeEntry].nextLevel != NULL){
+				displayMenu(curLevel[activeEntry].nextLevel, curLevel[activeEntry].nextLevelSize);
 			}
 			bottomEntry = redrawMenu(curLevel, topEntry, activeEntry, size);
-			isPushed[RIGHT_BUT] = 0;
 		}
 		if(isPushed[LEFT_BUT] == 1){
-			return;
 			isPushed[LEFT_BUT] = 0;
+			return;
 		}
-	}*/
+	}
 }
 
 

@@ -15,6 +15,7 @@
 #define INFO_freq 10
 #define ADC_freq 1000
 #define LCD_freq 10
+#define BUTTONS_freq 50
 
 void sysInit();
 void sysDelayMs(unsigned int ms);
@@ -25,6 +26,7 @@ uint8_t ftoa(float num, char* buffer, uint8_t dig, uint8_t dec);
 uint8_t uitoa(uint32_t num, char* buffer, uint8_t base);
 uint8_t atof(float* num, char* buffer);
 uint8_t atoui(uint32_t* num, char* buffer);
+uint32_t min(uint32_t a, uint32_t b);
 uint8_t strcmpLen(const char* str1, const char* str2, uint16_t len);
 
 inline int min(int a, int b){

@@ -3,12 +3,13 @@
  *
  * Created: 2011-05-18 22:54:01
  *  Author: Jachu
- */ 
+ */
+#include "stm32f10x_gpio.h"
 #include "sys.h"
 #include "buttons.h"
 
 #define THRESHOLD 5
-#define THRESHOLD_HOLD 200
+#define THRESHOLD_HOLD 50
 
 volatile uint8_t isPushed[BUTTONS_NUM];
 volatile uint8_t isHeld[BUTTONS_NUM];
@@ -18,10 +19,26 @@ volatile uint8_t wasHeld[BUTTONS_NUM];
 //void (*handlersPushed[BUTTONS_NUM])(void) = {handleButton1Pushed, handleButton2Pushed, handleButton3Pushed, handleButton4Pushed};
 //void (*handlersHeld[BUTTONS_NUM])(void) = {handleButton1Held, handleButton2Held, handleButton3Held, handleButton4Held};
 
-/*ISR(TCC1_OVF_vect){
-	int i;
-	for(i = 0; i < BUTTONS_NUM; i++){
-		if(!(PORTE_IN & (1<<pinNum[i]))){
+void buttonsInit(){
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+	GPIO_InitTypeDef gpioInit;
+	gpioInit.GPIO_Mode = GPIO_Mode_IPU;
+	gpioInit.GPIO_Speed = GPIO_Speed_2MHz;
+	gpioInit.GPIO_Pin = buttonsPins[0] | buttonsPins[1] | buttonsPins[2] | buttonsPins[3];
+	GPIO_Init(BUTTONS_PORT, &gpioInit);
+
+
+	for(int i = 0; i < BUTTONS_NUM; i++){
+		cntPushed[i] = 0;
+		isPushed[i] = 0;
+		isHeld[i] = 0;
+		wasHeld[i] = 0;
+	}
+}
+
+void buttonsSys(){
+	for(int i = 0; i < BUTTONS_NUM; i++){
+		if(!GPIO_ReadInputDataBit(BUTTONS_PORT, buttonsPins[i])){
 			cntPushed[i]++;
 		}
 		else{
@@ -36,27 +53,5 @@ volatile uint8_t wasHeld[BUTTONS_NUM];
 			cntPushed[i] = 0;
 			wasHeld[i] = 1;
 		}
-	}
-}*/
-
-
-void initButtons(){
-	/*PORTE_PIN0CTRL = PORT_OPC_PULLUP_gc;
-	PORTE_PIN1CTRL = PORT_OPC_PULLUP_gc;
-	PORTE_PIN2CTRL = PORT_OPC_PULLUP_gc;
-	PORTE_PIN3CTRL = PORT_OPC_PULLUP_gc;
-	PMIC_CTRL = PMIC_LOLVLEN_bm;
-	sei();
-	TCC1_CTRLA = TC_CLKSEL_DIV1024_gc;
-	TCC1_CTRLB = TC_WGMODE_NORMAL_gc;
-	TCC1_INTCTRLA = TC_OVFINTLVL_LO_gc;
-	TCC1_PER = 312;
-	*/
-	int i;
-	for(i = 0; i < BUTTONS_NUM; i++){
-		cntPushed[i] = 0;
-		isPushed[i] = 0;
-		isHeld[i] = 0;
-		wasHeld[i] = 0;
 	}
 }

@@ -360,7 +360,7 @@ byte LcdPixel ( byte x, byte y, LcdPixelMode mode )
     if ( y > LCD_Y_RES ) return OUT_OF_BORDER;
 
     /* Recalculating index and offset */
-    index = ( ( y / 8 ) * 84 ) + x;
+    index = ( ( y / 8 ) * LCD_X_RES ) + x;
     offset  = y - ( ( y / 8 ) * 8 );
 
     data = LcdCache[ index ];

@@ -9,25 +9,27 @@
 #include <stm32f10x_adc.h>
 #include <stm32f10x_gpio.h>
 #include <misc.h>
+#include "sys.h"
 #include "adc.h"
+#include "sharpConvArr.h"
 
 #define ADC_BUFFER (4*ADC_NSAMP_MEAN)
 
 uint16_t adcBuffer[ADC_BUFFER];
-volatile float curMean;
-volatile float emfMean;
-volatile float motVMean;
+volatile float sharpMean[4];
+volatile int32_t sharpDist[4];
+
 
 void adcInit(){
 	/* ADCCLK = PCLK2/4 */
 	RCC_ADCCLKConfig(RCC_PCLK2_Div4);
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOA, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1 | RCC_APB2Periph_GPIOC, ENABLE);
 
 	GPIO_InitTypeDef gpioInit;
-	gpioInit.GPIO_Pin = CUR_PIN | EMF_POS_PIN | EMF_NEG_PIN | MOT_V_PIN;
+	gpioInit.GPIO_Pin = sharpPins[0] | sharpPins[1] | sharpPins[2] | sharpPins[3];
 	gpioInit.GPIO_Mode = GPIO_Mode_AIN;
-	GPIO_Init(GPIOA, &gpioInit);
+	GPIO_Init(SHARP_PORT, &gpioInit);
 
 	NVIC_InitTypeDef nvicInit;
 	nvicInit.NVIC_IRQChannel = ADC1_2_IRQn;
@@ -59,10 +61,10 @@ void adcInit(){
 	adcInit.ADC_DataAlign = ADC_DataAlign_Right;
 	adcInit.ADC_NbrOfChannel = 4;
 	ADC_Init(ADC1, &adcInit);
-	ADC_RegularChannelConfig(ADC1, CUR_CHANNEL, CUR_RANK, ADC_SampleTime_28Cycles5);
-	ADC_RegularChannelConfig(ADC1, EMF_POS_CHANNEL, EMF_POS_RANK, ADC_SampleTime_28Cycles5);
-	ADC_RegularChannelConfig(ADC1, EMF_NEG_CHANNEL, EMF_NEG_RANK, ADC_SampleTime_28Cycles5);
-	ADC_RegularChannelConfig(ADC1, MOT_V_CHANNEL, MOT_V_RANK, ADC_SampleTime_28Cycles5);
+	ADC_RegularChannelConfig(ADC1, sharpChannels[0], sharpRanks[0], ADC_SampleTime_28Cycles5);
+	ADC_RegularChannelConfig(ADC1, sharpChannels[1], sharpRanks[1], ADC_SampleTime_28Cycles5);
+	ADC_RegularChannelConfig(ADC1, sharpChannels[2], sharpRanks[2], ADC_SampleTime_28Cycles5);
+	ADC_RegularChannelConfig(ADC1, sharpChannels[3], sharpRanks[3], ADC_SampleTime_28Cycles5);
 	ADC_DMACmd(ADC1, ENABLE);
 	ADC_ITConfig(ADC1, ADC_IT_EOC, ENABLE);
 
@@ -74,35 +76,28 @@ void adcInit(){
 	while(ADC_GetCalibrationStatus(ADC1));
 }
 
-float adcCurMeas(){
-	return curMean;
+
+float adcSharp(Sharps sharp){
+	return sharpMean[sharp];
 }
 
-float adcEmfMeas(){
-	return emfMean;
-}
-
-float adcMotSupplyMeas(){
-	return motVMean;
+int32_t adcSharpDist(Sharps sharp){
+	return convArr[min((uint32_t)(sharpMean[sharp]*100 + 0.5),
+						sizeof(convArr)/sizeof(convArr[0]))];
 }
 
 extern "C" {
 
 void ADC1_2_IRQHandler(void){
-	int32_t tmpCur = 0;
-	int32_t tmpEmfPos = 0;
-	int32_t tmpEmfNeg = 0;
-	int32_t tmpMotV = 0;
+	int32_t sharpTmp[4] = {0, 0, 0, 0};
 	for(int i = 0; i < ADC_NSAMP_MEAN; i++){
-		tmpCur += adcBuffer[i*4 + CUR_RANK - 1];
-		tmpEmfPos += adcBuffer[i*4 + EMF_POS_RANK - 1];
-		tmpEmfNeg += adcBuffer[i*4 + EMF_NEG_RANK - 1];
-		tmpMotV += adcBuffer[i*4 + MOT_V_RANK - 1];
+		for(int s = 0; s < 4; s++){
+			sharpTmp[s] += adcBuffer[i*4 + sharpRanks[s] - 1];
+		}
 	}
-	curMean = (float)tmpCur * CUR_MUL / ADC_NSAMP_MEAN;
-	emfMean = ((float)tmpEmfPos - (float)tmpEmfNeg) * EMF_MUL / ADC_NSAMP_MEAN;
-	motVMean = (float)tmpMotV * MOT_V_MUL / ADC_NSAMP_MEAN;
-
+	for(int s = 0; s < 4; s++){
+		sharpMean[s] = (float)sharpTmp[s] * sharpMul[s] / ADC_NSAMP_MEAN;
+	}
 	ADC_ClearITPendingBit(ADC1, ADC_IT_EOC);
 }
 

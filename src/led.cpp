@@ -13,18 +13,18 @@ void ledInit(){
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 	GPIO_InitTypeDef gpioInit;
-	gpioInit.GPIO_Pin = LED1 | LED2 | LED3 | LED4;
+	gpioInit.GPIO_Pin = ledPins[0] | ledPins[1] | ledPins[2] | ledPins[3];
 	gpioInit.GPIO_Mode = GPIO_Mode_Out_PP;
 	gpioInit.GPIO_Speed = GPIO_Speed_2MHz;
 	GPIO_Init(GPIOB, &gpioInit);
 }
 
 void ledSet(uint16_t mask){
-	GPIO_ResetBits(GPIOB, mask);
+	GPIO_SetBits(GPIOB, mask);
 }
 
 void ledReset(uint16_t mask){
-	GPIO_SetBits(GPIOB, mask);
+	GPIO_ResetBits(GPIOB, mask);
 }
 
 void ledToggle(uint16_t mask){

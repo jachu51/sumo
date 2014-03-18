@@ -10,10 +10,10 @@
 
 #include <stm32f10x_gpio.h>
 
-#define LED1 GPIO_Pin_8
-#define LED2 GPIO_Pin_9
-#define LED3 GPIO_Pin_10
-#define LED4 GPIO_Pin_11
+static const uint16_t ledPins[] = {	GPIO_Pin_8,
+										GPIO_Pin_9,
+										GPIO_Pin_10,
+										GPIO_Pin_11};
 
 void ledInit();
 void ledSet(uint16_t);

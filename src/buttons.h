@@ -9,7 +9,14 @@
 #ifndef BUTTONS_H_
 #define BUTTONS_H_
 
-#define BUTTONS_NUM 5
+#include "stm32f10x_gpio.h"
+
+#define BUTTONS_NUM 4
+#define BUTTONS_PORT GPIOC
+static const uint16_t buttonsPins[] = {GPIO_Pin_8,
+										GPIO_Pin_9,
+										GPIO_Pin_10,
+										GPIO_Pin_11};
 
 typedef void (*voidFunc)(void);
 
@@ -28,6 +35,7 @@ void handleButton2Held(void);
 void handleButton3Held(void);
 void handleButton4Held(void);
 void handleButton5Held(void);*/
-void initButtons(void);
+void buttonsInit(void);
+void buttonsSys();
 
 #endif /* BUTTONS_H_ */
