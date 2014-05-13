@@ -139,7 +139,7 @@ void SysTick_Handler(void){
 		motorPID(Left);
 		motorPID(Right);
 	}
-	if(cnt % (uint16_t)(SYS_freq/ADC_freq) == 2){
+	if(cnt % (uint16_t)(SYS_freq/ADC_freq) == 0){
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 	}
 	if(cnt % (uint16_t)(SYS_freq/BUTTONS_freq) == 3){

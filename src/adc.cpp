@@ -74,6 +74,9 @@ void adcInit(){
 	while(ADC_GetResetCalibrationStatus(ADC1));
 	ADC_StartCalibration(ADC1);
 	while(ADC_GetCalibrationStatus(ADC1));
+
+	/* Start ADC1 Software Conversion */
+	//ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 }
 
 
@@ -83,7 +86,7 @@ float adcSharp(Sharps sharp){
 
 int32_t adcSharpDist(Sharps sharp){
 	return convArr[min((uint32_t)(sharpMean[sharp]*100 + 0.5),
-						sizeof(convArr)/sizeof(convArr[0]))];
+						sizeof(convArr)/sizeof(convArr[0]) - 1)];
 }
 
 extern "C" {
