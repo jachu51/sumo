@@ -16,6 +16,7 @@
 #define ADC_freq 1000
 #define LCD_freq 10
 #define BUTTONS_freq 50
+#define RAMP_freq 10
 
 void sysInit();
 void sysDelayMs(unsigned int ms);
@@ -33,9 +34,22 @@ inline int min(int a, int b){
 	return a>b?b:a;
 }
 
+inline float min(float a, float b){
+	return a>b?b:a;
+}
+
 inline int max(int a, int b){
 	return a<b?b:a;
 }
+
+inline float max(float a, float b){
+	return a<b?b:a;
+}
+
+inline float abs(float a){
+	return a>0?a:-a;
+}
+
 
 extern "C" {
 

@@ -8,6 +8,8 @@
 #ifndef ADC_H_
 #define ADC_H_
 
+#include <stm32f10x_adc.h>
+#include <stm32f10x_gpio.h>
 #include <stm32f10x_dma.h>
 
 enum Sharps{

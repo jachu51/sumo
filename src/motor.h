@@ -25,15 +25,16 @@
 #define IN_B_2 GPIO_Pin_7
 #define IN_2_PORT GPIOC
 
+static const float maxAcc = 500;
 
 enum Direction{
-	Forward,
-	Backward
+	MotorForward,
+	MotorBackward
 };
 
 enum Motor{
-	Left = 0,
-	Right = 1
+	MotorLeft = 0,
+	MotorRight = 1
 };
 
 extern volatile int32_t motor_width[2];
@@ -47,6 +48,7 @@ void motorRunPos(Motor motor);
 void motorStop(Motor motor);
 void motorShutdown(Motor motor);
 void motorPID(Motor motor);
+void motorRamp(float freq, Motor motor);
 void motorSetVel(float speed, Motor motor); //rpm
 void motorSetPos(float posL, Motor motor);		//rotations
 void motorSetPid(float imotorKp, float imotorKi, float imotorKd);

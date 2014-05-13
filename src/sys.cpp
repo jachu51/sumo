@@ -22,7 +22,7 @@ void sysInit(){
 	ledInit();
 	lineDetInit();
 	//ctrlInit();
-	motorInit(20, 2, 0, 64*19);
+	motorInit(10, 25, 0, 64*19);
 	adcInit();
 	buttonsInit();
 	SysTick_Config(SystemCoreClock / SYS_freq);
@@ -136,8 +136,8 @@ void SysTick_Handler(void){
 		ctrlSendInfo();
 	}*/
 	if(cnt % (uint16_t)(SYS_freq/PID_freq) == 1){
-		motorPID(Left);
-		motorPID(Right);
+		motorPID(MotorLeft);
+		motorPID(MotorRight);
 	}
 	if(cnt % (uint16_t)(SYS_freq/ADC_freq) == 0){
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
@@ -145,8 +145,12 @@ void SysTick_Handler(void){
 	if(cnt % (uint16_t)(SYS_freq/BUTTONS_freq) == 3){
 		buttonsSys();
 	}
-	if(cnt % (uint16_t)(SYS_freq/PID_freq) == 4 && lcdEnable == true){
+	if(cnt % (uint16_t)(SYS_freq/LCD_freq) == 4 && lcdEnable == true){
 		LcdUpdate();
+	}
+	if(cnt % (uint16_t)(SYS_freq/RAMP_freq) == 4){
+		motorRamp(RAMP_freq, MotorLeft);
+		motorRamp(RAMP_freq, MotorRight);
 	}
 
 	cnt++;

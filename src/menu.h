@@ -10,11 +10,6 @@
 
 #include <stm32f10x_gpio.h>
 
-#define UP_BUT 0
-#define DOWN_BUT 2
-#define RIGHT_BUT 3
-#define LEFT_BUT 1
-
 typedef struct menuentry{
 	const char* text;
 	uint8_t len;

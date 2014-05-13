@@ -119,7 +119,7 @@ bool ctrlCheckAndExec(){
 			pos += sizeof(mV) - 1;
 			float rpm;
 			pos += atof(&rpm, tmpBuf + pos);
-			motorSetVel(rpm, Left);
+			motorSetVel(rpm, MotorLeft);
 		}
 		else if(strcmpLen(mP, tmpBuf + pos, sizeof(mP) - 1) == 0){
 			pos += sizeof(mP) - 1;
@@ -144,19 +144,19 @@ bool ctrlCheckAndExec(){
 		pos++;
 		if(strcmpLen(cStartV, tmpBuf + pos, sizeof(cStartV) - 1) == 0){
 			pos += sizeof(cStartV) - 1;
-			motorRunVel(Left);
+			motorRunVel(MotorLeft);
 		}
 		else if(strcmpLen(cStartP, tmpBuf + pos, sizeof(cStartP) - 1) == 0){
 			pos += sizeof(cStartP) - 1;
-			motorRunPos(Left);
+			motorRunPos(MotorLeft);
 		}
 		else if(strcmpLen(cStop, tmpBuf + pos, sizeof(cStop) - 1) == 0){
 			pos += sizeof(cStop) - 1;
-			motorStop(Left);
+			motorStop(MotorLeft);
 		}
 		else if(strcmpLen(cShutdown, tmpBuf + pos, sizeof(cShutdown) - 1) == 0){
 			pos += sizeof(cShutdown) - 1;
-			motorShutdown(Left);
+			motorShutdown(MotorLeft);
 		}
 		else{
 			return false;
@@ -174,10 +174,10 @@ void ctrlSendInfo(){
 	char buffer[SIZE];
 	uint16_t cnt = 0;
 
-	float speed = cur_speed[Left]*PID_freq*60/cpr;
+	float speed = cur_speed[MotorLeft]*PID_freq*60/cpr;
 	cnt += appendInfo(buffer + cnt, iRpm, sizeof(iRpm) - 1, speed);
 
-	float cte = cte_prev[Left]*PID_freq*60/cpr;;
+	float cte = cte_prev[MotorLeft]*PID_freq*60/cpr;;
 	cnt += appendInfo(buffer + cnt, iCte, sizeof(iCte) - 1, cte);
 
 	cnt += appendInfo(buffer + cnt, iCur, sizeof(iCur) - 1, 1);

@@ -11,6 +11,11 @@
 
 #include "stm32f10x_gpio.h"
 
+#define UP_BUT 0
+#define DOWN_BUT 2
+#define RIGHT_BUT 3
+#define LEFT_BUT 1
+
 #define BUTTONS_NUM 4
 #define BUTTONS_PORT GPIOC
 static const uint16_t buttonsPins[] = {GPIO_Pin_8,

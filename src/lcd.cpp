@@ -281,10 +281,11 @@ byte LcdChr ( LcdFontSize size, byte ch )
             b2 |= (c & 0x08) * 24;
 
             /* Copy two parts into LcdCache */
-            LcdCache[tmpIdx++] = b1;
-            LcdCache[tmpIdx++] = b1;
-            LcdCache[tmpIdx + 82] = b2;
-            LcdCache[tmpIdx + 83] = b2;
+            LcdCache[tmpIdx] = b1;
+            LcdCache[tmpIdx + 1] = b1;
+            LcdCache[tmpIdx + LCD_X_RES] = b2;
+            LcdCache[tmpIdx + LCD_X_RES + 1] = b2;
+            tmpIdx += 2;
         }
 
         /* Update x cursor position. */

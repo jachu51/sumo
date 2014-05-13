@@ -5,6 +5,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
 ../src/adc.cpp \
+../src/algorithm.cpp \
 ../src/buttons.cpp \
 ../src/ctrl.cpp \
 ../src/lcd.cpp \
@@ -31,6 +32,7 @@ S_UPPER_SRCS += \
 
 OBJS += \
 ./src/adc.o \
+./src/algorithm.o \
 ./src/buttons.o \
 ./src/ctrl.o \
 ./src/lcd.o \
@@ -64,6 +66,7 @@ C_DEPS += \
 
 CPP_DEPS += \
 ./src/adc.d \
+./src/algorithm.d \
 ./src/buttons.d \
 ./src/ctrl.d \
 ./src/lcd.d \

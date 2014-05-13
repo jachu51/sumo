@@ -8,6 +8,8 @@
 #ifndef LINEDET_H_
 #define LINEDET_H_
 
+#include "stm32f10x_gpio.h"
+
 enum Detector{
 	DetFrontLeft = 0,
 	DetFrontRight = 1,

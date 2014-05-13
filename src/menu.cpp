@@ -13,6 +13,7 @@
 #include "sys.h"
 #include "adc.h"
 #include "motor.h"
+#include "algorithm.h"
 
 #define LCD_ROWS 6
 #define LCD_COLS 14
@@ -21,7 +22,7 @@
 #define TAB 2
 
 static const char mainLevel1[]  = "Testy";
-static const char mainLevel2[]  = "Tryby";
+static const char mainLevel2[]  = "Walka";
 
 static const char testsMenu1[]  = "Sharp";
 static const char testsMenu2[]  = "Czujnik linii";
@@ -135,7 +136,7 @@ void testMotors(void){
 	static const float maxSpeed = 500;
 	float curSpeed[] = {0, 0};
 
-	static const Motor motorsList[] = {Left, Right};
+	static const Motor motorsList[] = {MotorLeft, MotorRight};
 	static const byte rectX = 20;
 	static const byte rectY = 60;
 	static const byte offX = 2;
@@ -239,7 +240,7 @@ MenuEntry testsLevel[] = {
 
 MenuEntry mainLevel[] = {
 	{mainLevel1, sizeof(mainLevel1) - 1, testsLevel, 3, 0},
-	{mainLevel2, sizeof(mainLevel2) - 1, 0, 0, testFunc}
+	{mainLevel2, sizeof(mainLevel2) - 1, 0, 0, mainAlgorithm}
 };
 
 

@@ -21,6 +21,7 @@ volatile uint16_t prev_enc[2];
 volatile int32_t cur_speed[2];
 volatile float cur_pos[2];
 volatile int32_t set_speed[2];
+volatile int32_t des_set_speed[2];
 volatile float set_pos[2];
 volatile bool motorUpdate[2];
 volatile bool motorEnable[2];
@@ -36,6 +37,7 @@ void motorInit(float imotorKp, float imotorKi, float imotorKd, uint32_t icpr){
 		motorEnable[i] = false;
 		motorUpdate[i] = true;
 		set_speed[i] = 0;
+		des_set_speed[i] = 0;
 		set_pos[i] = 0;
 	}
 
@@ -163,13 +165,13 @@ void motorRunPos(Motor motor){
 }
 
 void motorStop(Motor motor){
-	set_speed[motor] = 0;
+	des_set_speed[motor] = 0;
 }
 
 void motorShutdown(Motor motor){
 	motorEnable[motor] = false;
 	uint16_t tmpccer = TIM1->CCER;
-	if(motor == Left){
+	if(motor == MotorLeft){
 		tmpccer &= ~(TIM_CCER_CC1E | TIM_CCER_CC2NE);
 	}
 	else{
@@ -186,10 +188,10 @@ void motorShutdown(Motor motor){
 }
 
 void motorSetVel(float speed, Motor motor){ 	//rpm
-	if(motor == Left){
+	if(motor == MotorLeft){
 		speed = -speed;
 	}
-	set_speed[motor] = speed*cpr/(60*PID_freq);
+	des_set_speed[motor] = speed*cpr/(60*PID_freq);
 }
 
 void motorSetPos(float pos, Motor motor){		//rotations
@@ -221,10 +223,15 @@ void motorPID(Motor motor){
 	if(motorEnable[motor]){
 		int32_t cte = (set_speed[motor] - cur_speed[motor]);
 		//uint8_t a = 0;
-		cte_int[motor] += cte;
+		if(motor_width[motor] < (int32_t)(MAX_WIDTH*0.9) &&
+				motor_width[motor] > (int32_t)(-MAX_WIDTH*0.9))
+		{
+			cte_int[motor] += cte;
+		}
 		motor_width[motor] = motorKp*cte +
 								motorKd*(cte - cte_prev[motor])*PID_freq +
 								motorKi*cte_int[motor]/PID_freq;
+		//motor_width[motor] = (float)set_speed[motor]/500 * 0.9 * MAX_WIDTH;
 		if(motor_width[motor] > MAX_WIDTH*0.9){
 			motor_width[motor] = MAX_WIDTH*0.9;
 		}
@@ -235,14 +242,14 @@ void motorPID(Motor motor){
 
 		uint16_t ccrVal;
 		if(motor_width[motor] < 0){
-			motorEnableCC(Backward, motor);
+			motorEnableCC(MotorBackward, motor);
 			ccrVal = -motor_width[motor];
 		}
 		else{
-			motorEnableCC(Forward, motor);
+			motorEnableCC(MotorForward, motor);
 			ccrVal = motor_width[motor];
 		}
-		if(motor == Left){
+		if(motor == MotorLeft){
 			TIM1->CCR1 = ccrVal;
 			TIM1->CCR2 = ccrVal;
 		}
@@ -254,8 +261,21 @@ void motorPID(Motor motor){
 }
 
 
+void motorRamp(float freq, Motor motor){
+	float dAcc = maxAcc/freq;
+	if(abs(des_set_speed[motor] - set_speed[motor]) < dAcc){
+		set_speed[motor] = des_set_speed[motor];
+	}
+	else if(des_set_speed[motor] > set_speed[motor]){
+		set_speed[motor] += dAcc;
+	}
+	else{
+		set_speed[motor] -= dAcc;
+	}
+}
+
 uint16_t motorReadEnc(Motor motor){
-	if(motor == Left){
+	if(motor == MotorLeft){
 		return TIM_GetCounter(TIM4);
 	}
 	else{
@@ -282,25 +302,25 @@ void motorResetDist(Motor motor){
 
 void motorEnableCC(Direction dir, Motor motor){
 
-	if(dir == Forward && motor == Left){
+	if(dir == MotorForward && motor == MotorLeft){
 		uint16_t tmpccer = TIM1->CCER;
 		tmpccer &= ~(TIM_CCER_CC2NE);
 		tmpccer |= TIM_CCER_CC1E;
 		TIM1->CCER = tmpccer;
 	}
-	else if(dir == Backward && motor == Left){
+	else if(dir == MotorBackward && motor == MotorLeft){
 		uint16_t tmpccer = TIM1->CCER;
 		tmpccer &= ~(TIM_CCER_CC1E);
 		tmpccer |= TIM_CCER_CC2NE;
 		TIM1->CCER = tmpccer;
 	}
-	else if(dir == Forward && motor == Right){
+	else if(dir == MotorForward && motor == MotorRight){
 		uint16_t tmpccer = TIM1->CCER;
 		tmpccer &= ~(TIM_CCER_CC3NE);
 		tmpccer |= TIM_CCER_CC4E;
 		TIM1->CCER = tmpccer;
 	}
-	else if(dir == Backward && motor == Right){
+	else if(dir == MotorBackward && motor == MotorRight){
 		uint16_t tmpccer = TIM1->CCER;
 		tmpccer &= ~(TIM_CCER_CC4E);
 		tmpccer |= TIM_CCER_CC3NE;
@@ -312,12 +332,12 @@ extern "C" {
 
 void TIM3_IRQHandler(void){
 	TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
-	motorUpdate[Motor::Right] = true;
+	motorUpdate[MotorRight] = true;
 }
 
 void TIM4_IRQHandler(void){
 	TIM_ClearITPendingBit(TIM4, TIM_IT_Update);
-	motorUpdate[Motor::Left] = true;
+	motorUpdate[MotorLeft] = true;
 }
 
 }
