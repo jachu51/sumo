@@ -12,6 +12,7 @@
 #include "adc.h"
 #include "lcd.h"
 #include "buttons.h"
+#include "lineDet.h"
 
 volatile unsigned int del;
 volatile bool lcdEnable;
@@ -19,8 +20,9 @@ volatile bool lcdEnable;
 void sysInit(){
 	lcdEnable = false;
 	ledInit();
+	lineDetInit();
 	//ctrlInit();
-	motorInit(1, 2, 0, 64*19);
+	motorInit(20, 2, 0, 64*19);
 	adcInit();
 	buttonsInit();
 	SysTick_Config(SystemCoreClock / SYS_freq);
@@ -133,17 +135,17 @@ void SysTick_Handler(void){
 	/*if(cnt % (uint16_t)(SYS_freq/INFO_freq) == 0){
 		ctrlSendInfo();
 	}*/
-	if(cnt % (uint16_t)(SYS_freq/PID_freq) == 0){
+	if(cnt % (uint16_t)(SYS_freq/PID_freq) == 1){
 		motorPID(Left);
 		motorPID(Right);
 	}
-	if(cnt % (uint16_t)(SYS_freq/ADC_freq) == 0){
+	if(cnt % (uint16_t)(SYS_freq/ADC_freq) == 2){
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 	}
-	if(cnt % (uint16_t)(SYS_freq/BUTTONS_freq) == 0){
+	if(cnt % (uint16_t)(SYS_freq/BUTTONS_freq) == 3){
 		buttonsSys();
 	}
-	if(cnt % (uint16_t)(SYS_freq/PID_freq) == 0 && lcdEnable == true){
+	if(cnt % (uint16_t)(SYS_freq/PID_freq) == 4 && lcdEnable == true){
 		LcdUpdate();
 	}
 

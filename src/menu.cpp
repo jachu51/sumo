@@ -12,6 +12,7 @@
 #include "lineDet.h"
 #include "sys.h"
 #include "adc.h"
+#include "motor.h"
 
 #define LCD_ROWS 6
 #define LCD_COLS 14
@@ -37,27 +38,51 @@ void testLineDet(void){
 	while(isPushed[LEFT_BUT] == 0){
 		LcdClear();
 		static const byte rectA = 10;
-		static const byte frontLeftRect[][2] = {{0, 0},
-												{rectA-1, rectA-1}};
-		static const byte frontRightRect[][2] = {{0, LCD_Y_RES-rectA},
-												{rectA-1, LCD_Y_RES-1}};
-		static const byte rearLeftRect[][2] = {{LCD_X_RES-rectA, 0},
-												{LCD_X_RES-1, rectA-1}};
-		static const byte rearRightRect[][2] = {{LCD_X_RES-rectA, LCD_Y_RES-rectA},
-												{LCD_X_RES-1, LCD_Y_RES-1}};
-		if(lineDetCheck(DetFrontLeft)){
-			LcdSingleBar(	frontLeftRect[0][0],
-							frontLeftRect[0][1],
-							frontLeftRect[1][0]-frontLeftRect[0][0],
-							frontLeftRect[1][1]-frontLeftRect[0][1],
-							PIXEL_ON);
-		}
-		else{
-			LcdRect(frontLeftRect[0][0],
-					frontLeftRect[1][0],
-					frontLeftRect[0][1],
-					frontLeftRect[1][1],
-					PIXEL_ON);
+		static const byte detRect[][2][2] = {{{0, 0},
+												{rectA-1, rectA-1}},
+
+												{{LCD_X_RES-rectA, 0},
+												{LCD_X_RES-1, rectA-1}},
+
+												{{0, LCD_Y_RES-rectA},
+												{rectA-1, LCD_Y_RES-1}},
+
+												{{LCD_X_RES-rectA, LCD_Y_RES-rectA},
+												{LCD_X_RES-1, LCD_Y_RES-1}}};
+		static const Detector detList[] = {DetFrontLeft,
+											DetFrontRight,
+											DetRearLeft,
+											DetRearRight};
+		for(int i = 0; i < sizeof(detList)/sizeof(detList[0]); i++){
+			if(lineDetCheck(detList[i])){
+				LcdSingleBar(	detRect[i][0][0],
+								detRect[i][1][1],
+								detRect[i][1][1] - detRect[i][0][1] + 1,
+								detRect[i][1][0] - detRect[i][0][0] + 1,
+						PIXEL_ON);
+			}
+			else{
+				LcdLine(detRect[i][0][0],
+						detRect[i][0][0],
+						detRect[i][0][1],
+						detRect[i][1][1],
+						PIXEL_ON);
+				LcdLine(detRect[i][0][0],
+						detRect[i][1][0],
+						detRect[i][1][1],
+						detRect[i][1][1],
+						PIXEL_ON);
+				LcdLine(detRect[i][1][0],
+						detRect[i][1][0],
+						detRect[i][1][1],
+						detRect[i][0][1],
+						PIXEL_ON);
+				LcdLine(detRect[i][1][0],
+						detRect[i][0][0],
+						detRect[i][0][1],
+						detRect[i][0][1],
+						PIXEL_ON);
+			}
 		}
 		sysDelayMs(100);
 	}
@@ -107,7 +132,103 @@ void testSharps(void){
 }
 
 void testMotors(void){
+	static const float maxSpeed = 500;
+	float curSpeed[] = {0, 0};
 
+	static const Motor motorsList[] = {Left, Right};
+	static const byte rectX = 20;
+	static const byte rectY = 60;
+	static const byte offX = 2;
+	static const byte offY = 2;
+	static const byte motorsRect[][2][2] = {{{offX, offY},
+												{offX + rectX - 1, offY + rectY - 1}},
+
+												{{LCD_X_RES - offX - rectX, offY},
+												{LCD_X_RES - offX - 1, offY + rectY - 1}}};
+	int active = 0;
+	for(int i = 0; i < sizeof(motorsList)/sizeof(motorsList[0]); i++){
+		motorSetVel(0, motorsList[i]);
+		motorRunVel(motorsList[i]);
+	}
+	while(isPushed[LEFT_BUT] == 0){
+		LcdClear();
+		for(int i = 0;i < sizeof(motorsList)/sizeof(motorsList[0]); i++){
+			//Rectangle
+			LcdLine(motorsRect[i][0][0],
+					motorsRect[i][0][0],
+					motorsRect[i][0][1],
+					motorsRect[i][1][1],
+					PIXEL_ON);
+			LcdLine(motorsRect[i][0][0],
+					motorsRect[i][1][0],
+					motorsRect[i][1][1],
+					motorsRect[i][1][1],
+					PIXEL_ON);
+			LcdLine(motorsRect[i][1][0],
+					motorsRect[i][1][0],
+					motorsRect[i][1][1],
+					motorsRect[i][0][1],
+					PIXEL_ON);
+			LcdLine(motorsRect[i][1][0],
+					motorsRect[i][0][0],
+					motorsRect[i][0][1],
+					motorsRect[i][0][1],
+					PIXEL_ON);
+			//Speed indicator
+			byte y1 = offY + rectY/2;
+			byte y2 = y1 - rectY/2 * curSpeed[i]/maxSpeed;
+			LcdRect(motorsRect[i][0][0],
+					motorsRect[i][1][0],
+					min(y1, y2),
+					max(y1, y2),
+					PIXEL_ON);
+			if(i == active){
+				LcdLine(motorsRect[i][0][0]-1,
+						motorsRect[i][0][0]-1,
+						motorsRect[i][0][1]-1,
+						motorsRect[i][1][1]+1,
+						PIXEL_ON);
+				LcdLine(motorsRect[i][0][0]-1,
+						motorsRect[i][1][0]+1,
+						motorsRect[i][1][1]+1,
+						motorsRect[i][1][1]+1,
+						PIXEL_ON);
+				LcdLine(motorsRect[i][1][0]+1,
+						motorsRect[i][1][0]+1,
+						motorsRect[i][1][1]+1,
+						motorsRect[i][0][1]-1,
+						PIXEL_ON);
+				LcdLine(motorsRect[i][1][0]+1,
+						motorsRect[i][0][0]-1,
+						motorsRect[i][0][1]-1,
+						motorsRect[i][0][1]-1,
+						PIXEL_ON);
+			}
+			motorSetVel(curSpeed[i], motorsList[i]);
+		}
+		if(isPushed[RIGHT_BUT] != 0){
+			active = (active + 1) % sizeof(motorsList)/sizeof(motorsList[0]);
+
+			isPushed[RIGHT_BUT] = 0;
+		}
+		if(isPushed[UP_BUT] != 0){
+			curSpeed[active] += maxSpeed/20;
+			curSpeed[active] = curSpeed[active] > maxSpeed ? maxSpeed : curSpeed[active];
+
+			isPushed[UP_BUT] = 0;
+		}
+		if(isPushed[DOWN_BUT] != 0){
+			curSpeed[active] -= maxSpeed/20;
+			curSpeed[active] = curSpeed[active] < -maxSpeed ? -maxSpeed : curSpeed[active];
+
+			isPushed[DOWN_BUT] = 0;
+		}
+		sysDelayMs(100);
+	}
+	for(int i = 0; i < sizeof(motorsList)/sizeof(motorsList[0]); i++){
+		motorShutdown(motorsList[i]);
+	}
+	isPushed[LEFT_BUT] = 0;
 }
 
 MenuEntry testsLevel[] = {

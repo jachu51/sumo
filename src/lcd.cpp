@@ -521,13 +521,13 @@ byte LcdSingleBar ( byte baseX, byte baseY, byte height, byte width, LcdPixelMod
     /* Checking border */
 	if ( ( baseX > LCD_X_RES ) || ( baseY > LCD_Y_RES ) ) return OUT_OF_BORDER;
 
-	if ( height > baseY )
+	if ( height >= baseY )
 		tmp = 0;
 	else
-		tmp = baseY - height;
+		tmp = baseY - height + 1;
 
     /* Draw lines */
-	for ( tmpIdxY = tmp; tmpIdxY < baseY; tmpIdxY++ )
+	for ( tmpIdxY = tmp; tmpIdxY <= baseY; tmpIdxY++ )
 	{
 		for ( tmpIdxX = baseX; tmpIdxX < (baseX + width); tmpIdxX++ )
         {

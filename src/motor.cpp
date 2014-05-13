@@ -186,6 +186,9 @@ void motorShutdown(Motor motor){
 }
 
 void motorSetVel(float speed, Motor motor){ 	//rpm
+	if(motor == Left){
+		speed = -speed;
+	}
 	set_speed[motor] = speed*cpr/(60*PID_freq);
 }
 

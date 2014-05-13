@@ -15,7 +15,7 @@
 
 #define ADC_BUFFER (4*ADC_NSAMP_MEAN)
 
-uint16_t adcBuffer[ADC_BUFFER];
+volatile uint16_t adcBuffer[ADC_BUFFER];
 volatile float sharpMean[4];
 volatile int32_t sharpDist[4];
 

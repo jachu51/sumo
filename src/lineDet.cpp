@@ -14,7 +14,8 @@ void lineDetInit(){
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
 	GPIO_InitTypeDef gpioInit;
 	gpioInit.GPIO_Pin = lineDetPins[0] | lineDetPins[1];
-	gpioInit.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	//gpioInit.GPIO_Pin = GPIO_Pin_12;
+	gpioInit.GPIO_Mode = GPIO_Mode_IPU;
 	gpioInit.GPIO_Speed = GPIO_Speed_2MHz;
 	GPIO_Init(lineDetPorts[0], &gpioInit);
 	gpioInit.GPIO_Pin = lineDetPins[2] | lineDetPins[3];

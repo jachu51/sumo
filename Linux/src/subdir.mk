@@ -9,6 +9,7 @@ CPP_SRCS += \
 ../src/ctrl.cpp \
 ../src/lcd.cpp \
 ../src/led.cpp \
+../src/lineDet.cpp \
 ../src/main.cpp \
 ../src/menu.cpp \
 ../src/motor.cpp \
@@ -34,6 +35,7 @@ OBJS += \
 ./src/ctrl.o \
 ./src/lcd.o \
 ./src/led.o \
+./src/lineDet.o \
 ./src/main.o \
 ./src/menu.o \
 ./src/misc.o \
@@ -60,40 +62,41 @@ C_DEPS += \
 ./src/stm32f10x_usart.d \
 ./src/system_stm32f10x.d 
 
-S_UPPER_DEPS += \
-./src/startup_stm32f10x_md.d 
-
 CPP_DEPS += \
 ./src/adc.d \
 ./src/buttons.d \
 ./src/ctrl.d \
 ./src/lcd.d \
 ./src/led.d \
+./src/lineDet.d \
 ./src/main.d \
 ./src/menu.d \
 ./src/motor.d \
 ./src/sys.d 
 
+S_UPPER_DEPS += \
+./src/startup_stm32f10x_md.d 
+
 
 # Each subdirectory must supply rules for building sources it contributes
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
-	@echo 'Invoking: ARM Sourcery Linux GCC C++ Compiler'
-	arm-none-eabi-g++ -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupport -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPeriph_Driver/inc -I"/home/jachu/workspaceSTM/Sumo_STM/src" -O0 -ffunction-sections -fdata-sections -fsingle-precision-constant -Wall -std=gnu++0x -Wa,-adhlns="$@.lst" -fno-exceptions -fno-rtti -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -mcpu=cortex-m3 -mthumb -mfloat-abi=soft -g3 -gdwarf-2 -o "$@" "$<"
+	@echo 'Invoking: Cross ARM C++ Compiler'
+	arm-none-eabi-g++ -mcpu=cortex-m3 -mthumb -O0 -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wall  -g3 -I"/home/jachu/workspaceSTM/Sumo_STM/src" -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPeriph_Driver/inc -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupport -std=gnu++11 -fabi-version=0 -fno-exceptions -fno-rtti -Wa,-adhlns="$@.lst" -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -c -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
 src/%.o: ../src/%.c
 	@echo 'Building file: $<'
-	@echo 'Invoking: ARM Sourcery Linux GCC C Compiler'
-	arm-none-eabi-gcc -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupport -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPeriph_Driver/inc -I"/home/jachu/workspaceSTM/Sumo_STM/src" -O0 -fsingle-precision-constant -Wall -Wa,-adhlns="$@.lst" -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -mcpu=cortex-m3 -mthumb -mfloat-abi=soft -g3 -gdwarf-2 -o "$@" "$<"
+	@echo 'Invoking: Cross ARM C Compiler'
+	arm-none-eabi-gcc -mcpu=cortex-m3 -mthumb -O0 -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wall  -g3 -I"/home/jachu/workspaceSTM/Sumo_STM/src" -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPeriph_Driver/inc -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupport -std=gnu11 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -c -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
 src/%.o: ../src/%.S
 	@echo 'Building file: $<'
-	@echo 'Invoking: ARM Sourcery Linux GCC Assembler'
-	arm-none-eabi-gcc -x assembler-with-cpp -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupport -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPeriph_Driver/inc -I"/home/jachu/workspaceSTM/Sumo_STM/src" -Wall -Wa,-adhlns="$@.lst" -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -mcpu=cortex-m3 -mthumb -mfloat-abi=soft -g3 -gdwarf-2 -o "$@" "$<"
+	@echo 'Invoking: Cross ARM GNU Assembler'
+	arm-none-eabi-gcc -mcpu=cortex-m3 -mthumb -O0 -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wall  -g3 -x assembler-with-cpp -I"/home/jachu/workspaceSTM/Sumo_STM/src" -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPeriph_Driver/inc -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupport -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -c -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
