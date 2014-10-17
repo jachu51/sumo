@@ -174,10 +174,10 @@ void ctrlSendInfo(){
 	char buffer[SIZE];
 	uint16_t cnt = 0;
 
-	float speed = cur_speed[MotorLeft]*PID_freq*60/cpr;
+	float speed = -1; //cur_speed[MotorLeft]*PID_freq*60/cpr;
 	cnt += appendInfo(buffer + cnt, iRpm, sizeof(iRpm) - 1, speed);
 
-	float cte = cte_prev[MotorLeft]*PID_freq*60/cpr;;
+	float cte = -1; //cte_prev[MotorLeft]*PID_freq*60/cpr;;
 	cnt += appendInfo(buffer + cnt, iCte, sizeof(iCte) - 1, cte);
 
 	cnt += appendInfo(buffer + cnt, iCur, sizeof(iCur) - 1, 1);

@@ -11,7 +11,7 @@
 #include <stm32f10x_tim.h>
 #include <stm32f10x_gpio.h>
 
-#define MAX_WIDTH 1440
+#define MAX_WIDTH 720 //2880 //1440
 
 volatile int32_t cte_int[2], cte_prev[2];
 volatile float motorKp, motorKi, motorKd;
@@ -129,19 +129,30 @@ void motorInit(float imotorKp, float imotorKi, float imotorKd, uint32_t icpr){
 	TIM_TimeBaseInit(TIM1, &tim1Init);
 
 	/* PWM1 Mode configuration: Channel2 */
-	ocInit.TIM_OCMode = TIM_OCMode_PWM1;
-	ocInit.TIM_OutputState = TIM_OutputState_Disable;
-	ocInit.TIM_OutputNState = TIM_OutputNState_Disable;
+	ocInit.TIM_OCMode = TIM_OCMode_Inactive;
 	ocInit.TIM_Pulse = 0;
 	ocInit.TIM_OCPolarity = TIM_OCPolarity_High;
 	ocInit.TIM_OCNPolarity = TIM_OCNPolarity_High;
 
+
+
+	ocInit.TIM_OutputState = TIM_OutputState_Enable;
+	ocInit.TIM_OutputNState = TIM_OutputNState_Disable;
 	TIM_OC1Init(TIM1, &ocInit);
 	TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Enable);
+
+	ocInit.TIM_OutputState = TIM_OutputState_Disable;
+	ocInit.TIM_OutputNState = TIM_OutputNState_Enable;
 	TIM_OC2Init(TIM1, &ocInit);
 	TIM_OC2PreloadConfig(TIM1, TIM_OCPreload_Enable);
+
+	ocInit.TIM_OutputState = TIM_OutputState_Disable;
+	ocInit.TIM_OutputNState = TIM_OutputNState_Enable;
 	TIM_OC3Init(TIM1, &ocInit);
 	TIM_OC3PreloadConfig(TIM1, TIM_OCPreload_Enable);
+
+	ocInit.TIM_OutputState = TIM_OutputState_Enable;
+	ocInit.TIM_OutputNState = TIM_OutputNState_Disable;
 	TIM_OC4Init(TIM1, &ocInit);
 	TIM_OC4PreloadConfig(TIM1, TIM_OCPreload_Enable);
 
@@ -170,15 +181,18 @@ void motorStop(Motor motor){
 
 void motorShutdown(Motor motor){
 	motorEnable[motor] = false;
-	uint16_t tmpccer = TIM1->CCER;
 	if(motor == MotorLeft){
-		tmpccer &= ~(TIM_CCER_CC1E | TIM_CCER_CC2NE);
+		uint16_t tmpccmr = TIM1->CCMR1;
+		tmpccmr &= (uint16_t)(~(TIM_CCMR1_OC1M | TIM_CCMR1_OC2M));
+		tmpccmr |= (uint16_t)((TIM_OCMode_Inactive << 8) | TIM_OCMode_Inactive);
+		TIM1->CCMR1 = tmpccmr;
 	}
 	else{
-
-		tmpccer &= ~(TIM_CCER_CC3NE | TIM_CCER_CC4E);
+		uint16_t tmpccmr = TIM1->CCMR2;
+		tmpccmr &= (uint16_t)(~(TIM_CCMR2_OC3M | TIM_CCMR2_OC4M));
+		tmpccmr |= (uint16_t)((TIM_OCMode_Inactive << 8) | TIM_OCMode_Inactive);
+		TIM1->CCMR2 = tmpccmr;
 	}
-	TIM1->CCER = tmpccer;
 	cte_int[motor] = 0; cte_prev[motor] = 0;
 	prev_enc[motor] = 0;
 	cur_speed[motor] = 0;
@@ -192,6 +206,7 @@ void motorSetVel(float speed, Motor motor){ 	//rpm
 		speed = -speed;
 	}
 	des_set_speed[motor] = speed*cpr/(60*PID_freq);
+	//set_speed[motor] = speed*cpr/(60*PID_freq);
 }
 
 void motorSetPos(float pos, Motor motor){		//rotations
@@ -205,12 +220,18 @@ void motorSetPid(float imotorKp, float imotorKi, float imotorKd){
 
 void motorPID(Motor motor){
 	uint16_t cur_enc = motorReadEnc(motor);
+
 	if(motorUpdate[motor] == true){
-		if(cur_enc < prev_enc[motor]){
-			cur_speed[motor] = ((int)cur_enc - prev_enc[motor] + 0xffff);
+		if(iabs((int)cur_enc - prev_enc[motor]) > 0xffff/2){
+			if(cur_enc < prev_enc[motor]){
+				cur_speed[motor] = ((int)cur_enc - prev_enc[motor] + 0xffff);
+			}
+			else{
+				cur_speed[motor] = ((int)cur_enc - prev_enc[motor] - 0xffff);
+			}
 		}
 		else{
-			cur_speed[motor] = ((int)cur_enc - prev_enc[motor] - 0xffff);
+			cur_speed[motor] = ((int)cur_enc - prev_enc[motor]);
 		}
 		motorUpdate[motor] = false;
 	}
@@ -227,6 +248,10 @@ void motorPID(Motor motor){
 				motor_width[motor] > (int32_t)(-MAX_WIDTH*0.9))
 		{
 			cte_int[motor] += cte;
+		}
+		if(cte_int[motor] > 2000 || cte_int[motor] < -2000){
+			int a = 0;
+			a++;
 		}
 		motor_width[motor] = motorKp*cte +
 								motorKd*(cte - cte_prev[motor])*PID_freq +
@@ -263,7 +288,7 @@ void motorPID(Motor motor){
 
 void motorRamp(float freq, Motor motor){
 	float dAcc = maxAcc/freq;
-	if(abs(des_set_speed[motor] - set_speed[motor]) < dAcc){
+	if(fabs(des_set_speed[motor] - set_speed[motor]) < dAcc){
 		set_speed[motor] = des_set_speed[motor];
 	}
 	else if(des_set_speed[motor] > set_speed[motor]){
@@ -301,30 +326,54 @@ void motorResetDist(Motor motor){
  */
 
 void motorEnableCC(Direction dir, Motor motor){
-
+	//TODO test dead time insertion
 	if(dir == MotorForward && motor == MotorLeft){
-		uint16_t tmpccer = TIM1->CCER;
-		tmpccer &= ~(TIM_CCER_CC2NE);
-		tmpccer |= TIM_CCER_CC1E;
-		TIM1->CCER = tmpccer;
+		uint16_t tmpccmr = TIM1->CCMR1;
+		//is OC2 in PWM mode 1?
+		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) == TIM_OCMode_PWM1){
+			tmpccmr &= (uint16_t)(~(TIM_CCMR1_OC2M));
+			tmpccmr |= (uint16_t)(TIM_OCMode_Inactive << 8);
+		}
+		else{
+			tmpccmr |= (uint16_t)(TIM_OCMode_PWM1);
+		}
+		TIM1->CCMR1 = tmpccmr;
 	}
 	else if(dir == MotorBackward && motor == MotorLeft){
-		uint16_t tmpccer = TIM1->CCER;
-		tmpccer &= ~(TIM_CCER_CC1E);
-		tmpccer |= TIM_CCER_CC2NE;
-		TIM1->CCER = tmpccer;
+		uint16_t tmpccmr = TIM1->CCMR1;
+		//is OC1 in PWM mode 1?
+		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) == TIM_OCMode_PWM1){
+			tmpccmr &= (uint16_t)(~(TIM_CCMR1_OC1M));
+			tmpccmr |= (uint16_t)(TIM_OCMode_Inactive);
+		}
+		else{
+			tmpccmr |= (uint16_t)(TIM_OCMode_PWM1 << 8);
+		}
+		TIM1->CCMR1 = tmpccmr;
 	}
 	else if(dir == MotorForward && motor == MotorRight){
-		uint16_t tmpccer = TIM1->CCER;
-		tmpccer &= ~(TIM_CCER_CC3NE);
-		tmpccer |= TIM_CCER_CC4E;
-		TIM1->CCER = tmpccer;
+		uint16_t tmpccmr = TIM1->CCMR2;
+		//is OC3 in PWM mode 1?
+		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) == TIM_OCMode_PWM1){
+			tmpccmr &= (uint16_t)(~(TIM_CCMR2_OC3M));
+			tmpccmr |= (uint16_t)(TIM_OCMode_Inactive);
+		}
+		else{
+			tmpccmr |= (uint16_t)(TIM_OCMode_PWM1 << 8);
+		}
+		TIM1->CCMR2 = tmpccmr;
 	}
 	else if(dir == MotorBackward && motor == MotorRight){
-		uint16_t tmpccer = TIM1->CCER;
-		tmpccer &= ~(TIM_CCER_CC4E);
-		tmpccer |= TIM_CCER_CC3NE;
-		TIM1->CCER = tmpccer;
+		uint16_t tmpccmr = TIM1->CCMR2;
+		//is OC4 in PWM mode 1?
+		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) == TIM_OCMode_PWM1){
+			tmpccmr &= (uint16_t)(~(TIM_CCMR2_OC4M));
+			tmpccmr |= (uint16_t)(TIM_OCMode_Inactive << 8);
+		}
+		else{
+			tmpccmr |= (uint16_t)(TIM_OCMode_PWM1);
+		}
+		TIM1->CCMR2 = tmpccmr;
 	}
 }
 

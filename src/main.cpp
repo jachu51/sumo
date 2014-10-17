@@ -34,6 +34,10 @@ int main()
 				ledReset(ledPins[i]);
 			}
 		}
+		sysDelayMs(500);
+		ledSet(ledPins[0]);
+		sysDelayMs(500);
+		ledReset(ledPins[0]);
 		/*sysDelayMs(500);
 		LcdClear();
 		LcdGotoXYFont(1, 1);

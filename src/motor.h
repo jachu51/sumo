@@ -25,7 +25,7 @@
 #define IN_B_2 GPIO_Pin_7
 #define IN_2_PORT GPIOC
 
-static const float maxAcc = 500;
+static float maxAcc = 800;
 
 enum Direction{
 	MotorForward,
@@ -37,10 +37,10 @@ enum Motor{
 	MotorRight = 1
 };
 
-extern volatile int32_t motor_width[2];
-extern volatile int32_t cur_speed[2];
-extern volatile int32_t cte_int[2], cte_prev[2];
-extern uint16_t cpr;
+//extern volatile int32_t motor_width[2];
+//extern volatile int32_t cur_speed[2];
+//extern volatile int32_t cte_int[2], cte_prev[2];
+//extern uint16_t cpr;
 
 void motorInit(float imotorKp, float imotorKi, float imotorKd, uint32_t icpr);
 void motorRunVel(Motor motor);

@@ -10,6 +10,8 @@
 
 #include "stm32f10x_gpio.h"
 
+#define LINE_DET_NSAMP_MEAN 4
+
 enum Detector{
 	DetFrontLeft = 0,
 	DetFrontRight = 1,
@@ -28,6 +30,7 @@ static GPIO_TypeDef* lineDetPorts[] = {	GPIOB,
 										GPIOC};
 
 void lineDetInit();
+void lineDetSys();
 bool lineDetCheck(Detector det);
 
 
