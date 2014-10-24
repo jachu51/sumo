@@ -4,7 +4,11 @@
 
 -include ../makefile.init
 
+<<<<<<< HEAD
 RM := rm
+=======
+RM := rm -rf
+>>>>>>> f7aace71e6940c4b9964bdf5e0b8c9d02f2a0f41
 
 # All of the sources participating in the build are defined here
 -include sources.mk
@@ -42,6 +46,7 @@ endif
 -include ../makefile.defs
 
 # Add inputs and outputs from these tool invocations to the build variables 
+<<<<<<< HEAD
 
 # All Target
 all: bareCortexM
@@ -67,5 +72,46 @@ post-build:
 
 .PHONY: all clean dependents
 .SECONDARY: post-build
+=======
+SECONDARY_FLASH += \
+Sumo_STM.hex \
+
+SECONDARY_SIZE += \
+Sumo_STM.siz \
+
+
+# All Target
+all: Sumo_STM.elf secondary-outputs
+
+# Tool invocations
+Sumo_STM.elf: $(OBJS) $(USER_OBJS)
+	@echo 'Building target: $@'
+	@echo 'Invoking: Cross ARM C++ Linker'
+	arm-none-eabi-g++ -mcpu=cortex-m3 -mthumb -O0 -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wall  -g3 -T ../linker/stm32f10x_flash.ld -nostdlib -Xlinker --gc-sections -Wl,-Map,"Sumo_STM.map" -o "Sumo_STM.elf" $(OBJS) $(USER_OBJS) $(LIBS)
+	@echo 'Finished building target: $@'
+	@echo ' '
+
+Sumo_STM.hex: Sumo_STM.elf
+	@echo 'Invoking: Cross ARM GNU Create Flash Image'
+	arm-none-eabi-objcopy -O ihex "Sumo_STM.elf"  "Sumo_STM.hex"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+Sumo_STM.siz: Sumo_STM.elf
+	@echo 'Invoking: Cross ARM GNU Print Size'
+	arm-none-eabi-size --format=berkeley "Sumo_STM.elf"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+# Other Targets
+clean:
+	-$(RM) $(SECONDARY_SIZE)$(C++_DEPS)$(OBJS)$(C_DEPS)$(ASM_DEPS)$(CC_DEPS)$(SECONDARY_FLASH)$(CPP_DEPS)$(CXX_DEPS)$(C_UPPER_DEPS)$(S_UPPER_DEPS) Sumo_STM.elf
+	-@echo ' '
+
+secondary-outputs: $(SECONDARY_FLASH) $(SECONDARY_SIZE)
+
+.PHONY: all clean dependents
+.SECONDARY:
+>>>>>>> f7aace71e6940c4b9964bdf5e0b8c9d02f2a0f41
 
 -include ../makefile.targets
