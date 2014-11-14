@@ -4,11 +4,7 @@
 
 -include ../makefile.init
 
-<<<<<<< HEAD
-RM := rm
-=======
 RM := rm -rf
->>>>>>> f7aace71e6940c4b9964bdf5e0b8c9d02f2a0f41
 
 # All of the sources participating in the build are defined here
 -include sources.mk
@@ -46,33 +42,6 @@ endif
 -include ../makefile.defs
 
 # Add inputs and outputs from these tool invocations to the build variables 
-<<<<<<< HEAD
-
-# All Target
-all: bareCortexM
-
-# Tool invocations
-bareCortexM: $(OBJS) $(USER_OBJS)
-	@echo 'Building target: $@'
-	@echo 'Invoking: Cross ARM C++ Linker'
-	arm-none-eabi-g++ -mcpu=cortex-m3 -mthumb -O2  -g -T "/home/jacek/Studia/sumo/bareCortexM/linker/stm32f10x_flash.ld" -Xlinker --gc-sections -Wl,-Map,"bareCortexM.map" -o "bareCortexM" $(OBJS) $(USER_OBJS) $(LIBS)
-	@echo 'Finished building target: $@'
-	@echo ' '
-	$(MAKE) --no-print-directory post-build
-
-# Other Targets
-clean:
-	-$(RM) $(C++_DEPS)$(OBJS)$(C_DEPS)$(ASM_DEPS)$(CC_DEPS)$(CPP_DEPS)$(CXX_DEPS)$(C_UPPER_DEPS)$(S_UPPER_DEPS) bareCortexM
-	-@echo ' '
-
-post-build:
-	-@echo 'Copy the generated ELF file to the "bin" folder.'
-	-cp bareCortexM "/home/jacek/Studia/sumo/bareCortexM/bin/"
-	-@echo ' '
-
-.PHONY: all clean dependents
-.SECONDARY: post-build
-=======
 SECONDARY_FLASH += \
 Sumo_STM.hex \
 
@@ -112,6 +81,5 @@ secondary-outputs: $(SECONDARY_FLASH) $(SECONDARY_SIZE)
 
 .PHONY: all clean dependents
 .SECONDARY:
->>>>>>> f7aace71e6940c4b9964bdf5e0b8c9d02f2a0f41
 
 -include ../makefile.targets

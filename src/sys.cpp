@@ -22,7 +22,7 @@ void sysInit(){
 	ledInit();
 	lineDetInit();
 	//ctrlInit();
-	motorInit(3, 15, 0.1, 64*19);
+	motorInit(12, 40, 0, 64*19);
 	adcInit();
 	buttonsInit();
 	SysTick_Config(SystemCoreClock / SYS_freq);

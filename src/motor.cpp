@@ -12,6 +12,7 @@
 #include <stm32f10x_gpio.h>
 
 #define MAX_WIDTH 720 //2880 //1440
+#define MAX_RPM 500
 
 volatile int32_t cte_int[2], cte_prev[2];
 volatile float motorKp, motorKi, motorKd;
@@ -219,6 +220,8 @@ void motorSetPid(float imotorKp, float imotorKi, float imotorKd){
 }
 
 void motorPID(Motor motor){
+	static const bool regulate = true;
+
 	uint16_t cur_enc = motorReadEnc(motor);
 
 	if(motorUpdate[motor] == true){
@@ -241,29 +244,41 @@ void motorPID(Motor motor){
 	//cur_speed = cur_speed*60*PID_freq/cpr;
 	prev_enc[motor] = cur_enc;
 
+
 	if(motorEnable[motor]){
-		int32_t cte = (set_speed[motor] - cur_speed[motor]);
-		//uint8_t a = 0;
-		if(motor_width[motor] < (int32_t)(MAX_WIDTH*0.9) &&
-				motor_width[motor] > (int32_t)(-MAX_WIDTH*0.9))
-		{
-			cte_int[motor] += cte;
+		if(regulate == true){
+			int32_t cte = (set_speed[motor] - cur_speed[motor]);
+			//uint8_t a = 0;
+			if(motor_width[motor] < (int32_t)(MAX_WIDTH*0.9) &&
+					motor_width[motor] > (int32_t)(-MAX_WIDTH*0.9))
+			{
+				cte_int[motor] += cte;
+			}
+			if(cte_int[motor] > 2000 || cte_int[motor] < -2000){
+				int a = 0;
+				a++;
+			}
+			motor_width[motor] = motorKp*cte +
+									motorKd*(cte - cte_prev[motor])*PID_freq +
+									motorKi*cte_int[motor]/PID_freq;
+			//motor_width[motor] = (float)set_speed[motor]/500 * 0.9 * MAX_WIDTH;
+			if(motor_width[motor] > MAX_WIDTH*0.9){
+				motor_width[motor] = MAX_WIDTH*0.9;
+			}
+			if(motor_width[motor] < -MAX_WIDTH*0.9){
+				motor_width[motor] = -MAX_WIDTH*0.9;
+			}
+			cte_prev[motor] = cte;
 		}
-		if(cte_int[motor] > 2000 || cte_int[motor] < -2000){
-			int a = 0;
-			a++;
+		else{
+			motor_width[motor] = set_speed[motor] * (60*PID_freq) * MAX_WIDTH / MAX_RPM / cpr;
+			if(motor_width[motor] > MAX_WIDTH*0.9){
+				motor_width[motor] = MAX_WIDTH*0.9;
+			}
+			if(motor_width[motor] < -MAX_WIDTH*0.9){
+				motor_width[motor] = -MAX_WIDTH*0.9;
+			}
 		}
-		motor_width[motor] = motorKp*cte +
-								motorKd*(cte - cte_prev[motor])*PID_freq +
-								motorKi*cte_int[motor]/PID_freq;
-		//motor_width[motor] = (float)set_speed[motor]/500 * 0.9 * MAX_WIDTH;
-		if(motor_width[motor] > MAX_WIDTH*0.9){
-			motor_width[motor] = MAX_WIDTH*0.9;
-		}
-		if(motor_width[motor] < -MAX_WIDTH*0.9){
-			motor_width[motor] = -MAX_WIDTH*0.9;
-		}
-		cte_prev[motor] = cte;
 
 		uint16_t ccrVal;
 		if(motor_width[motor] < 0){
@@ -326,11 +341,10 @@ void motorResetDist(Motor motor){
  */
 
 void motorEnableCC(Direction dir, Motor motor){
-	//TODO test dead time insertion
 	if(dir == MotorForward && motor == MotorLeft){
 		uint16_t tmpccmr = TIM1->CCMR1;
 		//is OC2 in PWM mode 1?
-		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) == TIM_OCMode_PWM1){
+		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
 			tmpccmr &= (uint16_t)(~(TIM_CCMR1_OC2M));
 			tmpccmr |= (uint16_t)(TIM_OCMode_Inactive << 8);
 		}
@@ -342,7 +356,7 @@ void motorEnableCC(Direction dir, Motor motor){
 	else if(dir == MotorBackward && motor == MotorLeft){
 		uint16_t tmpccmr = TIM1->CCMR1;
 		//is OC1 in PWM mode 1?
-		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) == TIM_OCMode_PWM1){
+		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
 			tmpccmr &= (uint16_t)(~(TIM_CCMR1_OC1M));
 			tmpccmr |= (uint16_t)(TIM_OCMode_Inactive);
 		}
@@ -354,7 +368,7 @@ void motorEnableCC(Direction dir, Motor motor){
 	else if(dir == MotorForward && motor == MotorRight){
 		uint16_t tmpccmr = TIM1->CCMR2;
 		//is OC3 in PWM mode 1?
-		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) == TIM_OCMode_PWM1){
+		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
 			tmpccmr &= (uint16_t)(~(TIM_CCMR2_OC3M));
 			tmpccmr |= (uint16_t)(TIM_OCMode_Inactive);
 		}
@@ -366,7 +380,7 @@ void motorEnableCC(Direction dir, Motor motor){
 	else if(dir == MotorBackward && motor == MotorRight){
 		uint16_t tmpccmr = TIM1->CCMR2;
 		//is OC4 in PWM mode 1?
-		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) == TIM_OCMode_PWM1){
+		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
 			tmpccmr &= (uint16_t)(~(TIM_CCMR2_OC4M));
 			tmpccmr |= (uint16_t)(TIM_OCMode_Inactive << 8);
 		}

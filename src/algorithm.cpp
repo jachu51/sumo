@@ -78,13 +78,15 @@ EnemyDir getEnemyDir() {
 	int32_t distLeft = adcSharpDist(curSharp[0]);
 	int32_t distRight = adcSharpDist(curSharp[1]);
 	int32_t diff = distLeft - distRight;
-	if (diff < 100 && diff > -100 && distLeft < 1200 && distRight < 1200) {
+	int32_t minDist = 100;
+	int32_t maxDist = 300;
+	if (diff < minDist && diff > -minDist && distLeft < maxDist && distRight < maxDist) {
 		return EnDirAhead;
 	}
-	else if (diff >= 100 && distRight < 1200) {
+	else if (diff >= minDist && distRight < maxDist) {
 		return EnDirRight;
 	}
-	else if (diff <= -100 && distLeft < 1200) {
+	else if (diff <= -minDist && distLeft < maxDist) {
 		return EnDirLeft;
 	}
 	else {
@@ -98,11 +100,12 @@ void mainAlgorithm() {
 	LcdStr(FONT_1X, (const byte*)"WALKA");
 	//parametry
 	float speedMul = 1.2;
-	float runSpeed = 400;
+	float runSpeedSeek = 100;
+	float runSpeedAttack = 200;
 	float maxSpeed = 500;
 
 	//stan robota
-	EnemyDir enemyDir;
+	EnemyDir enemyDir = EnDirLeft;
 	Mode mode = Seek;
 
 	//inicjacja
@@ -111,6 +114,7 @@ void mainAlgorithm() {
 	motorRunVel(MotorLeft);
 	motorRunVel(MotorRight);
 
+	int32_t ctrUnknown = 0;
 	while(!isPushed[LEFT_BUT]) {
 		//Czujniki linii
 		//oba
@@ -131,10 +135,10 @@ void mainAlgorithm() {
 			enemyDir = EnDirRight;
 			mode = Seek;
 		}
-
-		/// Tryb szukania przeciwnika
+		/// Aktualne położenie przeciwnika
+		EnemyDir curEnemyDir = getEnemyDir();
+		/// Szukanie - reakcja na odczyt kierunku
 		if (mode == Seek) {
-			EnemyDir curEnemyDir = getEnemyDir();
 			if (curEnemyDir == EnDirAhead) {
 				mode = Attack;
 				enemyDir = EnDirAhead;
@@ -151,54 +155,63 @@ void mainAlgorithm() {
 				mode = Attack;
 			}
 		}
-		// ustawianie prędkości silników
-		if(mode == Seek) {
-			if(enemyDir == EnDirLeft) {
-				motorSetVel(runSpeed*curSpeedMul*(1/speedMul), curMotor[0]);
-				motorSetVel(runSpeed*curSpeedMul*speedMul, curMotor[1]);
-			}
-			else if(enemyDir == EnDirRight) {
-				motorSetVel(runSpeed*curSpeedMul*speedMul, curMotor[0]);
-				motorSetVel(runSpeed*curSpeedMul*(1/speedMul), curMotor[1]);
-			}
-		}
-		/// Tryb ataku
+		/// Atak - reakcja na odczyt kierunku
 		if (mode == Attack) {
-			if (enemyDir == EnDirAhead) {
-				// TODO Dobrać speedMul
-				speedMul = 1.1;
-				motorSetVel(runSpeed*speedMul, curMotor[0]);
-				motorSetVel(runSpeed*speedMul, curMotor[1]);
-			}
-			else if (enemyDir == EnDirLeft) {
-				speedMul = 1.2;
-				motorSetVel(runSpeed*curSpeedMul*(1/speedMul),curMotor[0]);
-				motorSetVel(runSpeed*curSpeedMul*speedMul, curMotor[1]);
-			}
-			else if (enemyDir == EnDirRight) {
-				speedMul = 1.2;
-				motorSetVel(runSpeed*curSpeedMul*speedMul, curMotor[0]);
-				motorSetVel(runSpeed*curSpeedMul*(1/speedMul), curMotor[1]);
-			}
-			// TODO Dobrać wartość opóźnienia
-			sysDelayMs(10);
-			EnemyDir curEnemyDir = getEnemyDir();
 			if (curEnemyDir == EnDirUnknown) {
-				if (enemyDir == EnDirAhead) {
-					enemyDir == EnDirLeft;
+				ctrUnknown ++;
+				if(ctrUnknown > 50){
+					if (enemyDir == EnDirAhead) {
+						enemyDir = EnDirLeft;
+					}
+					mode = Seek;
+					ctrUnknown = 0;
 				}
-				mode = Seek;
 			}
 			else if (curEnemyDir == EnDirAhead) {
 				enemyDir = EnDirAhead;
+				ctrUnknown = 0;
 			}
 			else if (curEnemyDir == EnDirRight) {
 				enemyDir = EnDirRight;
+				ctrUnknown = 0;
 			}
 			else if (curEnemyDir == EnDirLeft) {
 				enemyDir = EnDirLeft;
+				ctrUnknown = 0;
 			}
 		}
+		// Szukanie - ustawianie prędkości silników
+		if(mode == Seek) {
+			if(enemyDir == EnDirLeft) {
+				motorSetVel(runSpeedSeek*curSpeedMul*(1/speedMul), curMotor[0]);
+				motorSetVel(runSpeedSeek*curSpeedMul*speedMul, curMotor[1]);
+			}
+			else if(enemyDir == EnDirRight) {
+				motorSetVel(runSpeedSeek*curSpeedMul*speedMul, curMotor[0]);
+				motorSetVel(runSpeedSeek*curSpeedMul*(1/speedMul), curMotor[1]);
+			}
+		}
+		/// Atak - ustawianie prędkości silników
+		if (mode == Attack) {
+			if (enemyDir == EnDirAhead) {
+				// TODO Dobrać speedMul
+				//speedMul = 1.1;
+				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[0]);
+				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[1]);
+			}
+			else if (enemyDir == EnDirLeft) {
+				//speedMul = 1.2;
+				motorSetVel(runSpeedAttack*curSpeedMul*(1/speedMul),curMotor[0]);
+				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[1]);
+			}
+			else if (enemyDir == EnDirRight) {
+				//speedMul = 1.2;
+				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[0]);
+				motorSetVel(runSpeedAttack*curSpeedMul*(1/speedMul), curMotor[1]);
+			}
+		}
+		/// TODO Dobrać wartość opóźnienia
+		sysDelayMs(10);
 	}
 	motorShutdown(MotorLeft);
 	motorShutdown(MotorRight);

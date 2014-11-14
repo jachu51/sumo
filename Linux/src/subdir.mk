@@ -4,27 +4,6 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-<<<<<<< HEAD
-../src/exception.cpp \
-../src/interrupt.cpp \
-../src/main.cpp \
-../src/startup.cpp \
-../src/system_call.cpp 
-
-OBJS += \
-./src/exception.o \
-./src/interrupt.o \
-./src/main.o \
-./src/startup.o \
-./src/system_call.o 
-
-CPP_DEPS += \
-./src/exception.d \
-./src/interrupt.d \
-./src/main.d \
-./src/startup.d \
-./src/system_call.d 
-=======
 ../src/adc.cpp \
 ../src/algorithm.cpp \
 ../src/buttons.cpp \
@@ -100,16 +79,12 @@ CPP_DEPS += \
 
 S_UPPER_DEPS += \
 ./src/startup_stm32f10x_md.d 
->>>>>>> f7aace71e6940c4b9964bdf5e0b8c9d02f2a0f41
 
 
 # Each subdirectory must supply rules for building sources it contributes
 src/%.o: ../src/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: Cross ARM C++ Compiler'
-<<<<<<< HEAD
-	arm-none-eabi-g++ -mcpu=cortex-m3 -mthumb -O2  -g -std=gnu++11 -fabi-version=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -c -o "$@" "$<"
-=======
 	arm-none-eabi-g++ -mcpu=cortex-m3 -mthumb -O0 -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wall  -g3 -I"/home/jachu/workspaceSTM/Sumo_STM/src" -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPeriph_Driver/inc -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupport -std=gnu++11 -fabi-version=0 -fno-exceptions -fno-rtti -Wa,-adhlns="$@.lst" -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -c -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
@@ -125,7 +100,6 @@ src/%.o: ../src/%.S
 	@echo 'Building file: $<'
 	@echo 'Invoking: Cross ARM GNU Assembler'
 	arm-none-eabi-gcc -mcpu=cortex-m3 -mthumb -O0 -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections -Wall  -g3 -x assembler-with-cpp -I"/home/jachu/workspaceSTM/Sumo_STM/src" -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/STM32F10x_StdPeriph_Driver/inc -I/home/jachu/elektronika/STM32/STM32F10x_StdPeriph_Lib_V3.5.0/Libraries/CMSIS/CM3/CoreSupport -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -c -o "$@" "$<"
->>>>>>> f7aace71e6940c4b9964bdf5e0b8c9d02f2a0f41
 	@echo 'Finished building: $<'
 	@echo ' '
 

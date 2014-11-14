@@ -42,7 +42,7 @@ static const float sharpMul[] = {	3.3/4096,
 #define SHARP_PORT GPIOC
 
 #define ADC_DMA_CHANNEL DMA1_Channel1
-#define ADC_NSAMP_MEAN 4
+#define ADC_NSAMP_MEAN 12
 
 void adcInit();
 float adcSharpVol(Sharps sharp);

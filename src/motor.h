@@ -25,7 +25,7 @@
 #define IN_B_2 GPIO_Pin_7
 #define IN_2_PORT GPIOC
 
-static float maxAcc = 800;
+static float maxAcc = 1000;
 
 enum Direction{
 	MotorForward,
