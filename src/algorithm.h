@@ -14,7 +14,8 @@ enum EnemyDir{
 	EnDirLeft,
 	EnDirRight,
 	EnDirAhead,
-	EnDirUnknown
+	EnDirUnknown,
+	EnDirBack
 };
 
 void mainAlgorithm();

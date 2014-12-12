@@ -37,7 +37,7 @@ Linker subscript for STM32F10x definitions with 1024K Flash and 1024K External S
 MEMORY
 {
   RAM (xrw) : ORIGIN = 0x20000000, LENGTH = 20K
-  FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 128K
+  FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 120K	/* 8K for EEPROM emulation */
   FLASHB1 (rx) : ORIGIN = 0x00000000, LENGTH = 0
   EXTMEMB0 (rx) : ORIGIN = 0x00000000, LENGTH = 0
   EXTMEMB1 (rx) : ORIGIN = 0x00000000, LENGTH = 0

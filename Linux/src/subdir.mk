@@ -8,6 +8,7 @@ CPP_SRCS += \
 ../src/algorithm.cpp \
 ../src/buttons.cpp \
 ../src/ctrl.cpp \
+../src/eeprom.cpp \
 ../src/lcd.cpp \
 ../src/led.cpp \
 ../src/lineDet.cpp \
@@ -17,9 +18,11 @@ CPP_SRCS += \
 ../src/sys.cpp 
 
 C_SRCS += \
+../src/main_ee.c \
 ../src/misc.c \
 ../src/stm32f10x_adc.c \
 ../src/stm32f10x_dma.c \
+../src/stm32f10x_flash.c \
 ../src/stm32f10x_gpio.c \
 ../src/stm32f10x_rcc.c \
 ../src/stm32f10x_spi.c \
@@ -35,16 +38,19 @@ OBJS += \
 ./src/algorithm.o \
 ./src/buttons.o \
 ./src/ctrl.o \
+./src/eeprom.o \
 ./src/lcd.o \
 ./src/led.o \
 ./src/lineDet.o \
 ./src/main.o \
+./src/main_ee.o \
 ./src/menu.o \
 ./src/misc.o \
 ./src/motor.o \
 ./src/startup_stm32f10x_md.o \
 ./src/stm32f10x_adc.o \
 ./src/stm32f10x_dma.o \
+./src/stm32f10x_flash.o \
 ./src/stm32f10x_gpio.o \
 ./src/stm32f10x_rcc.o \
 ./src/stm32f10x_spi.o \
@@ -54,9 +60,11 @@ OBJS += \
 ./src/system_stm32f10x.o 
 
 C_DEPS += \
+./src/main_ee.d \
 ./src/misc.d \
 ./src/stm32f10x_adc.d \
 ./src/stm32f10x_dma.d \
+./src/stm32f10x_flash.d \
 ./src/stm32f10x_gpio.d \
 ./src/stm32f10x_rcc.d \
 ./src/stm32f10x_spi.d \
@@ -69,6 +77,7 @@ CPP_DEPS += \
 ./src/algorithm.d \
 ./src/buttons.d \
 ./src/ctrl.d \
+./src/eeprom.d \
 ./src/lcd.d \
 ./src/led.d \
 ./src/lineDet.d \

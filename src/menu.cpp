@@ -14,6 +14,7 @@
 #include "adc.h"
 #include "motor.h"
 #include "algorithm.h"
+#include "eeprom.h"
 
 #define LCD_ROWS 6
 #define LCD_COLS 14
@@ -23,11 +24,15 @@
 
 static const char mainLevel1[]  = "Testy";
 static const char mainLevel2[]  = "Walka";
+static const char mainLevel3[]  = "Parametry";
 
 static const char testsMenu1[]  = "Sharp";
 static const char testsMenu2[]  = "Czujnik linii";
 static const char testsMenu3[]  = "Silnik";
 
+static const char paramMenu1[]  = "kp";
+static const char paramMenu2[]  = "ki";
+static const char paramMenu3[]  = "kd";
 
 
 
@@ -232,20 +237,127 @@ void testMotors(void){
 	isPushed[LEFT_BUT] = 0;
 }
 
+enum ParamType{
+	Float,
+	Int
+};
+
+static const char paramName[][20] = {"kp",
+										"ki",
+										"kd"};
+static const ParamType paramType[] = {Float,
+										Float,
+										Float};
+static const uint16_t paramAddr[] = {0x00,
+										0x04,
+										0x08};
+
+void paramChange(int i){
+	int ind = 0;
+	bool updateDisp = true;
+	float valFloat;
+	int valInt;
+
+	uint16_t hiVal, lowVal;
+	EE_ReadVariable(paramAddr[i] + 2, &lowVal);
+	EE_ReadVariable(paramAddr[i], &hiVal);
+
+	if(paramType[i] == Float){
+		valFloat = (((uint32_t)hiVal << 16) | lowVal);
+		if(valFloat > 2000){
+			valFloat = 0;
+		}
+	}
+	if(paramType[i] == Int){
+		valInt = (((uint32_t)hiVal << 16) | lowVal);
+		if(valInt > 2000){
+			valInt = 0;
+		}
+	}
+
+	while(isPushed[LEFT_BUT] == 0){
+		if(updateDisp){
+			LcdClear();
+			LcdGotoXYFont(1, 1);
+			if(paramType[i] == Float){
+				char buffer[20];
+				ftoa(valFloat, buffer, 4, 2);
+				LcdStr(FONT_1X, (const byte*)buffer);
+			}
+			if(paramType[i] == Int){
+				char buffer[20];
+				uitoa(iabs(valInt), buffer, 10);
+				LcdStr(FONT_1X, (const byte*)buffer);
+			}
+			LcdUpdate();
+			updateDisp = false;
+		}
+		if(isPushed[UP_BUT] != 0){
+			if(paramType[i] == Float){
+				valFloat += 0.5;
+			}
+			if(paramType[i] == Int){
+				valInt += 1;
+			}
+			updateDisp = true;
+			isPushed[UP_BUT] = 0;
+		}
+		if(isPushed[DOWN_BUT] != 0){
+			if(paramType[i] == Float){
+				valFloat -= 0.5;
+			}
+			if(paramType[i] == Int){
+				valInt -= 1;
+			}
+			updateDisp = true;
+			isPushed[DOWN_BUT] = 0;
+		}
+	}
+	if(paramType[i] == Float){
+		lowVal = (uint16_t)((uint32_t)valFloat & 0xffff);
+		hiVal = (uint16_t)(((uint32_t)valFloat >> 16) & 0xffff);
+	}
+	if(paramType[i] == Int){
+		lowVal = (uint16_t)((uint32_t)valInt & 0xffff);
+		hiVal = (uint16_t)(((uint32_t)valInt >> 16) & 0xffff);
+	}
+	EE_WriteVariable(paramAddr[i] + 2, lowVal);
+	EE_WriteVariable(paramAddr[i], hiVal);
+
+	isPushed[LEFT_BUT] = 0;
+}
+
+void paramChange0(void){
+	paramChange(0);
+}
+
+void paramChange1(void){
+	paramChange(1);
+}
+
+void paramChange2(void){
+	paramChange(2);
+}
+
 MenuEntry testsLevel[] = {
 		{testsMenu1, sizeof(testsMenu1) - 1, 0, 0, testSharps},
 		{testsMenu2, sizeof(testsMenu2) - 1, 0, 0, testLineDet},
 		{testsMenu3, sizeof(testsMenu3) - 1, 0, 0, testMotors},
 };
 
-MenuEntry mainLevel[] = {
-	{mainLevel1, sizeof(mainLevel1) - 1, testsLevel, 3, 0},
-	{mainLevel2, sizeof(mainLevel2) - 1, 0, 0, mainAlgorithm}
+MenuEntry paramLevel[] = {
+		{paramMenu1, sizeof(paramMenu1) - 1, 0, 0, paramChange0},
+		{paramMenu2, sizeof(paramMenu2) - 1, 0, 0, paramChange1},
+		{paramMenu3, sizeof(paramMenu3) - 1, 0, 0, paramChange2}
 };
 
+MenuEntry mainLevel[] = {
+	{mainLevel1, sizeof(mainLevel1) - 1, testsLevel, 3, 0},
+	{mainLevel2, sizeof(mainLevel2) - 1, 0, 0, mainAlgorithm},
+	{mainLevel3, sizeof(mainLevel3) - 1, paramLevel, 3, 0}
+};
 
-
-uint8_t mainLevelSize = 2;
+uint8_t mainLevelSize = 3;
 
 uint8_t numEntryRows(uint8_t len){
 	return (uint8_t)(((int8_t)len - 2 - 1)/(LCD_COLS - 2) + 1);

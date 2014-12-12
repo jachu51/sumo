@@ -13,6 +13,7 @@
 #include "lcd.h"
 #include "buttons.h"
 #include "lineDet.h"
+#include "eeprom.h"
 
 volatile unsigned int del;
 volatile bool lcdEnable;
@@ -27,6 +28,12 @@ void sysInit(){
 	buttonsInit();
 	SysTick_Config(SystemCoreClock / SYS_freq);
 	LcdInit();
+
+	/* Unlock the Flash Program Erase controller */
+	FLASH_Unlock();
+	/* EEPROM Init */
+	EE_Init();
+
 	lcdEnable = true;
 }
 

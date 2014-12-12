@@ -75,19 +75,24 @@ void switchDirection() {
 }
 
 EnemyDir getEnemyDir() {
-	int32_t distLeft = adcSharpDist(curSharp[0]);
-	int32_t distRight = adcSharpDist(curSharp[1]);
-	int32_t diff = distLeft - distRight;
+	int32_t distLeftFr = adcSharpDist(curSharp[0]);
+	int32_t distRightFr = adcSharpDist(curSharp[1]);
+	int32_t distLeftBck = adcSharpDist(curSharp[2]);
+	int32_t distRightBck = adcSharpDist(curSharp[3]);
+	int32_t diff = distLeftFr - distRightFr;
 	int32_t minDist = 100;
 	int32_t maxDist = 300;
-	if (diff < minDist && diff > -minDist && distLeft < maxDist && distRight < maxDist) {
+	if (diff < minDist && diff > -minDist && distLeftFr < maxDist && distRightFr < maxDist) {
 		return EnDirAhead;
 	}
-	else if (diff >= minDist && distRight < maxDist) {
+	else if (diff >= minDist && distRightFr < maxDist) {
 		return EnDirRight;
 	}
-	else if (diff <= -minDist && distLeft < maxDist) {
+	else if (diff <= -minDist && distLeftFr < maxDist) {
 		return EnDirLeft;
+	}
+	else if(distLeftBck < maxDist || distRightBck < maxDist){
+		return EnDirBack;
 	}
 	else {
 		return EnDirUnknown;
@@ -116,24 +121,27 @@ void mainAlgorithm() {
 
 	int32_t ctrUnknown = 0;
 	while(!isPushed[LEFT_BUT]) {
-		//Czujniki linii
-		//oba
-		if(lineDetCheck(curDet[0]) && lineDetCheck(curDet[1])) {
-			switchDirection();
-			enemyDir = EnDirLeft;
-			mode = Seek;
-		}
-		//lewy
-		if(lineDetCheck(curDet[0])) {
-			switchDirection();
-			enemyDir = EnDirLeft;
-			mode = Seek;
-		}
-		//prawy
-		if(lineDetCheck(curDet[1])) {
-			switchDirection();
-			enemyDir = EnDirRight;
-			mode = Seek;
+
+		if (mode == Seek) {
+			//Czujniki linii
+			//oba
+			if(lineDetCheck(curDet[0]) && lineDetCheck(curDet[1])) {
+				switchDirection();
+				//enemyDir = EnDirLeft;
+				mode = Seek;
+			}
+			//lewy
+			if(lineDetCheck(curDet[0])) {
+				switchDirection();
+				//enemyDir = EnDirLeft;
+				mode = Seek;
+			}
+			//prawy
+			if(lineDetCheck(curDet[1])) {
+				switchDirection();
+				//enemyDir = EnDirRight;
+				mode = Seek;
+			}
 		}
 		/// Aktualne położenie przeciwnika
 		EnemyDir curEnemyDir = getEnemyDir();
@@ -153,6 +161,9 @@ void mainAlgorithm() {
 			else if (curEnemyDir == EnDirLeft) {
 				enemyDir = EnDirLeft;
 				mode = Attack;
+			}
+			else if (curEnemyDir == EnDirBack){
+				switchDirection();
 			}
 		}
 		/// Atak - reakcja na odczyt kierunku
@@ -178,6 +189,9 @@ void mainAlgorithm() {
 			else if (curEnemyDir == EnDirLeft) {
 				enemyDir = EnDirLeft;
 				ctrUnknown = 0;
+			}
+			else if (curEnemyDir == EnDirBack){
+				switchDirection();
 			}
 		}
 		// Szukanie - ustawianie prędkości silników
