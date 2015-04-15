@@ -25,14 +25,26 @@ int main()
 	displayMenu(mainLevel, mainLevelSize);
 	while(true){
 		//ctrlCheckAndExec();
-		for(int i = 0; i < 4; i++){
-			if(isHeld[i]){
-				ledSet(ledPins[i]);
-				isHeld[i] = 0;
-			}
-			else{
-				ledReset(ledPins[i]);
-			}
+//		for(int i = 0; i < 4; i++){
+//			if(isHeld[i]){
+//				ledSet(ledPins[i]);
+//				isHeld[i] = 0;
+//			}
+//			else{
+//				ledReset(ledPins[i]);
+//			}
+//		}
+		if(motorIsCurLimited(MotorLeft)){
+			ledSet(ledPins[2]);
+		}
+		else{
+			ledReset(ledPins[2]);
+		}
+		if(motorIsCurLimited(MotorRight)){
+			ledSet(ledPins[3]);
+		}
+		else{
+			ledReset(ledPins[3]);
 		}
 		sysDelayMs(500);
 		ledSet(ledPins[0]);

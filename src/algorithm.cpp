@@ -99,10 +99,29 @@ EnemyDir getEnemyDir() {
 	}
 }
 
+void startModuleInit(){
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+	GPIO_InitTypeDef gpioInit;
+	gpioInit.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	gpioInit.GPIO_Speed = GPIO_Speed_2MHz;
+	gpioInit.GPIO_Pin = startPin | killPin;
+	GPIO_Init(GPIOC, &gpioInit);
+}
+
+bool startModuleIsStart(){
+	return GPIO_ReadInputDataBit(GPIOC, startPin);
+}
+
+bool startModuleIsStop(){
+	return (GPIO_ReadInputDataBit(GPIOC, killPin) == Bit_RESET);		//inverted
+}
+
 void mainAlgorithm() {
+	static const bool startModule = true;
+
 	LcdClear();
 	LcdGotoXYFont(1, 1);
-	LcdStr(FONT_1X, (const byte*)"WALKA");
+	LcdStr(FONT_1X, (const byte*)"CZEKAM NA START");
 	//parametry
 	float speedMul = 1.2;
 	float runSpeedSeek = 100;
@@ -119,8 +138,23 @@ void mainAlgorithm() {
 	motorRunVel(MotorLeft);
 	motorRunVel(MotorRight);
 
+	if(startModule){
+		while(!isPushed[LEFT_BUT] &&
+				!startModuleIsStart())
+		{
+
+		}
+	}
+
+	LcdClear();
+	LcdGotoXYFont(1, 1);
+	LcdStr(FONT_1X, (const byte*)"WALKA");
+
 	int32_t ctrUnknown = 0;
-	while(!isPushed[LEFT_BUT]) {
+	while(!isPushed[LEFT_BUT] &&
+			(!startModule  || (startModuleIsStart() &&
+								!startModuleIsStop())))
+	{
 
 		if (mode == Seek) {
 			//Czujniki linii
@@ -208,23 +242,18 @@ void mainAlgorithm() {
 		/// Atak - ustawianie prędkości silników
 		if (mode == Attack) {
 			if (enemyDir == EnDirAhead) {
-				// TODO Dobrać speedMul
-				//speedMul = 1.1;
 				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[0]);
 				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[1]);
 			}
 			else if (enemyDir == EnDirLeft) {
-				//speedMul = 1.2;
 				motorSetVel(runSpeedAttack*curSpeedMul*(1/speedMul),curMotor[0]);
 				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[1]);
 			}
 			else if (enemyDir == EnDirRight) {
-				//speedMul = 1.2;
 				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[0]);
 				motorSetVel(runSpeedAttack*curSpeedMul*(1/speedMul), curMotor[1]);
 			}
 		}
-		/// TODO Dobrać wartość opóźnienia
 		sysDelayMs(10);
 	}
 	motorShutdown(MotorLeft);

@@ -18,6 +18,11 @@ enum EnemyDir{
 	EnDirBack
 };
 
+static const uint16_t startPin = GPIO_Pin_12;
+static const uint16_t killPin = GPIO_Pin_13;
+
+void startModuleInit();
+
 void mainAlgorithm();
 void switchDirection();
 /**

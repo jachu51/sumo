@@ -14,6 +14,7 @@
 #include "buttons.h"
 #include "lineDet.h"
 #include "eeprom.h"
+#include "algorithm.h"
 
 volatile unsigned int del;
 volatile bool lcdEnable;
@@ -23,9 +24,10 @@ void sysInit(){
 	ledInit();
 	lineDetInit();
 	//ctrlInit();
-	motorInit(12, 40, 0, 64*19);
+	motorInit(12, 40, 0, 1, 1, 64*19);
 	adcInit();
 	buttonsInit();
+	startModuleInit();
 	SysTick_Config(SystemCoreClock / SYS_freq);
 	LcdInit();
 
@@ -39,7 +41,7 @@ void sysInit(){
 
 void sysDelayMs(unsigned int ms){
 	del = ms;
-	while(del > 0);
+	while(del > 0) {}
 }
 
 void sysDelayMsRet(unsigned int ms){
@@ -65,6 +67,7 @@ uint8_t ftoa(float num, char* buffer, uint8_t dig, uint8_t dec){
 		num *= 10;
 		buffer[pos++] = (char)((((int)num) % 10) + 0x30);
 	}
+	buffer[pos] = 0;
 	return pos;
 }
 
@@ -83,6 +86,7 @@ uint8_t uitoa(uint32_t num, char* buffer, uint8_t base){
 		buffer[i] = buffer[pos - i - 1];
 		buffer[pos - i - 1] = tmp;
 	}
+	buffer[pos] = 0;
 	return pos;
 }
 
@@ -150,19 +154,20 @@ void SysTick_Handler(void){
 		ledReset(ledPins[0]);
 	}*/
 	if(cnt % (uint16_t)(SYS_freq/PID_freq) == 1){
-		static bool ledState = false;
+//		static bool ledState = false;
 		motorPID(MotorLeft);
 		motorPID(MotorRight);
-		if(ledState == false){
-			ledSet(ledPins[0]);
-			ledState = true;
-		}
-		else{
-			ledReset(ledPins[0]);
-			ledState = false;
-		}
+//		if(ledState == false){
+//			ledSet(ledPins[0]);
+//			ledState = true;
+//		}
+//		else{
+//			ledReset(ledPins[0]);
+//			ledState = false;
+//		}
 	}
 	if(cnt % (uint16_t)(SYS_freq/ADC_freq) == 0){
+		updateMeasVol();
 		ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 	}
 	if(cnt % (uint16_t)(SYS_freq/BUTTONS_freq) == 3){
@@ -177,6 +182,30 @@ void SysTick_Handler(void){
 	}
 	if(cnt % (uint16_t)(SYS_freq/LINE_DET_freq) == 6){
 		lineDetSys();
+	}
+	if(cnt % (uint16_t)(SYS_freq/INDICATOR_freq) == 7){
+		static bool ledState = false;
+		if(ledState == false){
+			ledSet(ledPins[0]);
+			ledState = true;
+		}
+		else{
+			ledReset(ledPins[0]);
+			ledState = false;
+		}
+
+		if(motorIsCurLimited(MotorLeft)){
+			ledSet(ledPins[2]);
+		}
+		else{
+			ledReset(ledPins[2]);
+		}
+		if(motorIsCurLimited(MotorRight)){
+			ledSet(ledPins[3]);
+		}
+		else{
+			ledReset(ledPins[3]);
+		}
 	}
 
 	cnt++;

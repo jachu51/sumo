@@ -26,11 +26,21 @@ target remote localhost:3333
 monitor halt
 monitor poll
 
-monitor flash probe 0
+#monitor flash probe 0
+
 monitor stm32f1x unlock 0
 monitor reset halt
-monitor flash erase_sector 0 0 last
+monitor sleep 1000
+monitor stm32f1x mass_erase 0
+#monitor flash erase_sector 0 0 30
+monitor sleep 1000
+
+monitor stm32f1x unlock 0
+monitor reset halt
+monitor sleep 1000
 monitor flash write_image Linux/Sumo_STM.elf
+monitor sleep 2000
+
 #monitor stm32f1x lock 0
 monitor reset halt
 

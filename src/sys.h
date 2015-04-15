@@ -18,6 +18,7 @@
 #define BUTTONS_freq 50
 #define RAMP_freq 50
 #define LINE_DET_freq 100
+#define INDICATOR_freq 50
 
 void sysInit();
 void sysDelayMs(unsigned int ms);

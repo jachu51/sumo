@@ -7,15 +7,22 @@
 
 #include "motor.h"
 #include "sys.h"
+#include "led.h"
+#include "adc.h"
 #include <stm32f10x_rcc.h>
 #include <stm32f10x_tim.h>
 #include <stm32f10x_gpio.h>
 
 #define MAX_WIDTH 720 //2880 //1440
 #define MAX_RPM 500
+#define MAX_MAX_WIDTH_COEFF (0.9f)
+
+static const float motorCurLimit = 1.0f;		//[A]
+volatile float maxWidthCoeff[2];
 
 volatile int32_t cte_int[2], cte_prev[2];
 volatile float motorKp, motorKi, motorKd;
+volatile float currentKp, currentKi;
 uint16_t cpr = 1;
 volatile int32_t motor_width[2];
 volatile uint16_t prev_enc[2];
@@ -26,9 +33,18 @@ volatile int32_t des_set_speed[2];
 volatile float set_pos[2];
 volatile bool motorUpdate[2];
 volatile bool motorEnable[2];
+volatile float currentCteInt[2];
 
-void motorInit(float imotorKp, float imotorKi, float imotorKd, uint32_t icpr){
+void motorInit(float imotorKp,
+				float imotorKi,
+				float imotorKd,
+				float icurrentKp,
+				float icurrentKi,
+				uint32_t icpr)
+{
 	motorKp = imotorKp; motorKd = imotorKd; motorKi = imotorKi; cpr = icpr;
+	currentKp = icurrentKp;
+	currentKi = icurrentKi;
 	for(int i = 0; i < 2; i++){
 		cte_int[i] = 0; cte_prev[i] = 0;
 		prev_enc[i] = 0;
@@ -40,6 +56,8 @@ void motorInit(float imotorKp, float imotorKi, float imotorKd, uint32_t icpr){
 		set_speed[i] = 0;
 		des_set_speed[i] = 0;
 		set_pos[i] = 0;
+		maxWidthCoeff[i] = MAX_MAX_WIDTH_COEFF;
+		currentCteInt[i] = 0;
 	}
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
@@ -203,7 +221,7 @@ void motorShutdown(Motor motor){
 }
 
 void motorSetVel(float speed, Motor motor){ 	//rpm
-	if(motor == MotorLeft){
+	if(motor == MotorRight){
 		speed = -speed;
 	}
 	des_set_speed[motor] = speed*cpr/(60*PID_freq);
@@ -217,6 +235,10 @@ void motorSetPos(float pos, Motor motor){		//rotations
 
 void motorSetPid(float imotorKp, float imotorKi, float imotorKd){
 	motorKp = imotorKp; motorKd = imotorKd; motorKi = imotorKi;
+}
+
+bool motorIsCurLimited(Motor motor){
+	return (maxWidthCoeff[motor] < MAX_MAX_WIDTH_COEFF - 1e-2);
 }
 
 void motorPID(Motor motor){
@@ -249,25 +271,50 @@ void motorPID(Motor motor){
 		if(regulate == true){
 			int32_t cte = (set_speed[motor] - cur_speed[motor]);
 			//uint8_t a = 0;
-			if(motor_width[motor] < (int32_t)(MAX_WIDTH*0.9) &&
-					motor_width[motor] > (int32_t)(-MAX_WIDTH*0.9))
-			{
-				cte_int[motor] += cte;
+
+			/* Current limit PI */
+			Meas motCurMeasType = RMotCur;
+			if(motor == MotorLeft){
+				motCurMeasType = LMotCur;
 			}
-			if(cte_int[motor] > 2000 || cte_int[motor] < -2000){
-				int a = 0;
-				a++;
+			else{
+				motCurMeasType = RMotCur;
 			}
+			float curCurrentCte = motorCurLimit - adcMeasVol(motCurMeasType);
+
+			maxWidthCoeff[motor] = currentKp * curCurrentCte +
+									currentKi * currentCteInt[motor]/PID_freq;
+
+			if(maxWidthCoeff[motor] > 0 && maxWidthCoeff[motor] < MAX_MAX_WIDTH_COEFF){
+				currentCteInt[motor] += curCurrentCte;
+			}
+
+			maxWidthCoeff[motor] = max(min(maxWidthCoeff[motor], MAX_MAX_WIDTH_COEFF), 0.0f);
+
+			/* Velocity PID */
+
 			motor_width[motor] = motorKp*cte +
 									motorKd*(cte - cte_prev[motor])*PID_freq +
 									motorKi*cte_int[motor]/PID_freq;
+
 			//motor_width[motor] = (float)set_speed[motor]/500 * 0.9 * MAX_WIDTH;
-			if(motor_width[motor] > MAX_WIDTH*0.9){
-				motor_width[motor] = MAX_WIDTH*0.9;
+			if(motor_width[motor] > MAX_WIDTH*maxWidthCoeff[motor]){
+				motor_width[motor] = MAX_WIDTH*maxWidthCoeff[motor];
 			}
-			if(motor_width[motor] < -MAX_WIDTH*0.9){
-				motor_width[motor] = -MAX_WIDTH*0.9;
+			if(motor_width[motor] < -MAX_WIDTH*maxWidthCoeff[motor]){
+				motor_width[motor] = -MAX_WIDTH*maxWidthCoeff[motor];
 			}
+
+			if(motor_width[motor] < (int32_t)(MAX_WIDTH*maxWidthCoeff[motor]) &&
+					motor_width[motor] > (int32_t)(-MAX_WIDTH*maxWidthCoeff[motor]))
+			{
+				cte_int[motor] += cte;
+			}
+//			if(cte_int[motor] > 2000 || cte_int[motor] < -2000){
+//				int a = 0;
+//				a++;
+//			}
+
 			cte_prev[motor] = cte;
 		}
 		else{
@@ -289,7 +336,7 @@ void motorPID(Motor motor){
 			motorEnableCC(MotorForward, motor);
 			ccrVal = motor_width[motor];
 		}
-		if(motor == MotorLeft){
+		if(motor == MotorRight){
 			TIM1->CCR1 = ccrVal;
 			TIM1->CCR2 = ccrVal;
 		}
@@ -315,7 +362,7 @@ void motorRamp(float freq, Motor motor){
 }
 
 uint16_t motorReadEnc(Motor motor){
-	if(motor == MotorLeft){
+	if(motor == MotorRight){
 		return TIM_GetCounter(TIM4);
 	}
 	else{
@@ -341,7 +388,7 @@ void motorResetDist(Motor motor){
  */
 
 void motorEnableCC(Direction dir, Motor motor){
-	if(dir == MotorForward && motor == MotorLeft){
+	if(dir == MotorForward && motor == MotorRight){
 		uint16_t tmpccmr = TIM1->CCMR1;
 		//is OC2 in PWM mode 1?
 		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
@@ -353,7 +400,7 @@ void motorEnableCC(Direction dir, Motor motor){
 		}
 		TIM1->CCMR1 = tmpccmr;
 	}
-	else if(dir == MotorBackward && motor == MotorLeft){
+	else if(dir == MotorBackward && motor == MotorRight){
 		uint16_t tmpccmr = TIM1->CCMR1;
 		//is OC1 in PWM mode 1?
 		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
@@ -365,7 +412,7 @@ void motorEnableCC(Direction dir, Motor motor){
 		}
 		TIM1->CCMR1 = tmpccmr;
 	}
-	else if(dir == MotorForward && motor == MotorRight){
+	else if(dir == MotorForward && motor == MotorLeft){
 		uint16_t tmpccmr = TIM1->CCMR2;
 		//is OC3 in PWM mode 1?
 		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
@@ -377,7 +424,7 @@ void motorEnableCC(Direction dir, Motor motor){
 		}
 		TIM1->CCMR2 = tmpccmr;
 	}
-	else if(dir == MotorBackward && motor == MotorRight){
+	else if(dir == MotorBackward && motor == MotorLeft){
 		uint16_t tmpccmr = TIM1->CCMR2;
 		//is OC4 in PWM mode 1?
 		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
@@ -395,12 +442,12 @@ extern "C" {
 
 void TIM3_IRQHandler(void){
 	TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
-	motorUpdate[MotorRight] = true;
+	motorUpdate[MotorLeft] = true;
 }
 
 void TIM4_IRQHandler(void){
 	TIM_ClearITPendingBit(TIM4, TIM_IT_Update);
-	motorUpdate[MotorLeft] = true;
+	motorUpdate[MotorRight] = true;
 }
 
 }

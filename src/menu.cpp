@@ -141,7 +141,7 @@ void testMotors(void){
 	static const float maxSpeed = 500;
 	float curSpeed[] = {0, 0};
 
-	static const Motor motorsList[] = {MotorLeft, MotorRight};
+	static const Motor motorsList[] = {MotorRight, MotorLeft};
 	static const byte rectX = 20;
 	static const byte rectY = 60;
 	static const byte offX = 2;
@@ -212,6 +212,28 @@ void testMotors(void){
 			}
 			motorSetVel(curSpeed[i], motorsList[i]);
 		}
+
+		LcdGotoXYFont(5, 1);
+		char buffer[20];
+		ftoa(adcMeasVol(BattVol), buffer, 4, 2);
+		LcdStr(FONT_1X, (const byte*)"Ubatt=");
+		LcdStr(FONT_1X, (const byte*)buffer);
+		LcdStr(FONT_1X, (const byte*)"V");
+
+		LcdGotoXYFont(5, 2);
+		buffer[20];
+		ftoa(adcMeasVol(RMotCur), buffer, 4, 2);
+		LcdStr(FONT_1X, (const byte*)"Irm=");
+		LcdStr(FONT_1X, (const byte*)buffer);
+		LcdStr(FONT_1X, (const byte*)"A");
+
+		LcdGotoXYFont(5, 3);
+		buffer[20];
+		ftoa(adcMeasVol(LMotCur), buffer, 4, 2);
+		LcdStr(FONT_1X, (const byte*)"Ilm=");
+		LcdStr(FONT_1X, (const byte*)buffer);
+		LcdStr(FONT_1X, (const byte*)"A");
+
 		if(isPushed[RIGHT_BUT] != 0){
 			active = (active + 1) % sizeof(motorsList)/sizeof(motorsList[0]);
 
@@ -251,6 +273,29 @@ static const ParamType paramType[] = {Float,
 static const uint16_t paramAddr[] = {0x00,
 										0x04,
 										0x08};
+template<class T>
+T readParam(int i){
+	uint16_t hiVal, lowVal;
+	EE_ReadVariable(paramAddr[i] + 2, &lowVal);
+	EE_ReadVariable(paramAddr[i], &hiVal);
+
+	uint32_t val = (((uint32_t)hiVal << 16) | lowVal);
+
+	T retVal = *((T*)(&val));	//cast to return type without bits modification
+
+	return retVal;
+}
+
+template<class T>
+void writeParam(int i, T val){
+	uint32_t writeVal = *((uint32_t*)(&val));
+
+	uint16_t lowVal = (uint16_t)((uint32_t)writeVal & 0xffff);
+	uint16_t hiVal = (uint16_t)(((uint32_t)writeVal >> 16) & 0xffff);
+
+	EE_WriteVariable(paramAddr[i] + 2, lowVal);
+	EE_WriteVariable(paramAddr[i], hiVal);
+}
 
 void paramChange(int i){
 	int ind = 0;
@@ -258,18 +303,14 @@ void paramChange(int i){
 	float valFloat;
 	int valInt;
 
-	uint16_t hiVal, lowVal;
-	EE_ReadVariable(paramAddr[i] + 2, &lowVal);
-	EE_ReadVariable(paramAddr[i], &hiVal);
-
 	if(paramType[i] == Float){
-		valFloat = (((uint32_t)hiVal << 16) | lowVal);
+		valFloat = readParam<float>(i);
 		if(valFloat > 2000){
 			valFloat = 0;
 		}
 	}
 	if(paramType[i] == Int){
-		valInt = (((uint32_t)hiVal << 16) | lowVal);
+		valInt = readParam<int>(i);
 		if(valInt > 2000){
 			valInt = 0;
 		}
@@ -314,15 +355,11 @@ void paramChange(int i){
 		}
 	}
 	if(paramType[i] == Float){
-		lowVal = (uint16_t)((uint32_t)valFloat & 0xffff);
-		hiVal = (uint16_t)(((uint32_t)valFloat >> 16) & 0xffff);
+		writeParam<float>(i, valFloat);
 	}
 	if(paramType[i] == Int){
-		lowVal = (uint16_t)((uint32_t)valInt & 0xffff);
-		hiVal = (uint16_t)(((uint32_t)valInt >> 16) & 0xffff);
+		writeParam<int>(i, valInt);
 	}
-	EE_WriteVariable(paramAddr[i] + 2, lowVal);
-	EE_WriteVariable(paramAddr[i], hiVal);
 
 	isPushed[LEFT_BUT] = 0;
 }

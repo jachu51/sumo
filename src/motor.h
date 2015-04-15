@@ -42,7 +42,12 @@ enum Motor{
 //extern volatile int32_t cte_int[2], cte_prev[2];
 //extern uint16_t cpr;
 
-void motorInit(float imotorKp, float imotorKi, float imotorKd, uint32_t icpr);
+void motorInit(float imotorKp,
+				float imotorKi,
+				float imotorKd,
+				float icurrentKp,
+				float icurrentKi,
+				uint32_t icpr);
 void motorRunVel(Motor motor);
 void motorRunPos(Motor motor);
 void motorStop(Motor motor);
@@ -52,6 +57,7 @@ void motorRamp(float freq, Motor motor);
 void motorSetVel(float speed, Motor motor); //rpm
 void motorSetPos(float posL, Motor motor);		//rotations
 void motorSetPid(float imotorKp, float imotorKi, float imotorKd);
+bool motorIsCurLimited(Motor motor);
 
 uint16_t motorReadEnc(Motor motor);
 float motorReadVel(Motor motor);
