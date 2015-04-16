@@ -31,6 +31,7 @@ Motor curMotor[] = {
 
 enum Mode{
 	Attack,
+	Retreat,
 	Seek
 };
 
@@ -123,10 +124,14 @@ void mainAlgorithm() {
 	LcdGotoXYFont(1, 1);
 	LcdStr(FONT_1X, (const byte*)"CZEKAM NA START");
 	//parametry
-	float speedMul = 1.2;
-	float runSpeedSeek = 100;
-	float runSpeedAttack = 200;
-	float maxSpeed = 500;
+	static const float speedMul = 1.2;
+	static const float runSpeedSeek = 100;
+	static const float runSpeedAttack = 200;
+	static const float maxSpeed = 500;
+
+	static const int32_t retreatTrigDelay = 1000;	// *10 ms
+	static const int32_t retreatStopDelay = 200;	// *10 ms
+	static const int32_t attackStopDelay = 50;		// *10 ms
 
 	//stan robota
 	EnemyDir enemyDir = EnDirLeft;
@@ -151,12 +156,30 @@ void mainAlgorithm() {
 	LcdStr(FONT_1X, (const byte*)"WALKA");
 
 	int32_t ctrUnknown = 0;
+	int32_t ctrMotCurLimit = 0;
+	int32_t ctrRetreat = 0;
 	while(!isPushed[LEFT_BUT] &&
 			(!startModule  || (startModuleIsStart() &&
 								!startModuleIsStop())))
 	{
 
-		if (mode == Seek) {
+		if(mode == Seek){
+			LcdClear();
+			LcdGotoXYFont(1, 1);
+			LcdStr(FONT_1X, (const byte*)"Seek");
+		}
+		else if(mode == Retreat){
+			LcdClear();
+			LcdGotoXYFont(1, 1);
+			LcdStr(FONT_1X, (const byte*)"Retreat");
+		}
+		else if(mode == Attack){
+			LcdClear();
+			LcdGotoXYFont(1, 1);
+			LcdStr(FONT_1X, (const byte*)"Attack");
+		}
+
+		if (mode == Seek || mode == Retreat) {
 			//Czujniki linii
 			//oba
 			if(lineDetCheck(curDet[0]) && lineDetCheck(curDet[1])) {
@@ -203,8 +226,8 @@ void mainAlgorithm() {
 		/// Atak - reakcja na odczyt kierunku
 		if (mode == Attack) {
 			if (curEnemyDir == EnDirUnknown) {
-				ctrUnknown ++;
-				if(ctrUnknown > 50){
+				++ctrUnknown;
+				if(ctrUnknown > attackStopDelay){
 					if (enemyDir == EnDirAhead) {
 						enemyDir = EnDirLeft;
 					}
@@ -227,9 +250,30 @@ void mainAlgorithm() {
 			else if (curEnemyDir == EnDirBack){
 				switchDirection();
 			}
+
+			if(motorIsCurLimited(MotorLeft) || motorIsCurLimited(MotorRight)){
+				++ctrMotCurLimit;
+				if(ctrMotCurLimit > retreatTrigDelay){
+					switchDirection();
+					mode = Retreat;
+					ctrMotCurLimit = 0;
+				}
+			}
+			else{
+				ctrMotCurLimit = 0;
+			}
 		}
+		// Odwrot - licznik czasu
+		if(mode == Retreat){
+			++ctrRetreat;
+			if(ctrRetreat > retreatStopDelay){
+				mode = Seek;
+				ctrRetreat = 0;
+			}
+		}
+
 		// Szukanie - ustawianie prędkości silników
-		if(mode == Seek) {
+		if(mode == Seek || mode == Retreat) {
 			if(enemyDir == EnDirLeft) {
 				motorSetVel(runSpeedSeek*curSpeedMul*(1/speedMul), curMotor[0]);
 				motorSetVel(runSpeedSeek*curSpeedMul*speedMul, curMotor[1]);

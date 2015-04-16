@@ -221,7 +221,7 @@ void motorShutdown(Motor motor){
 }
 
 void motorSetVel(float speed, Motor motor){ 	//rpm
-	if(motor == MotorRight){
+	if(motor == MotorLeft){
 		speed = -speed;
 	}
 	des_set_speed[motor] = speed*cpr/(60*PID_freq);
@@ -336,7 +336,7 @@ void motorPID(Motor motor){
 			motorEnableCC(MotorForward, motor);
 			ccrVal = motor_width[motor];
 		}
-		if(motor == MotorRight){
+		if(motor == MotorLeft){
 			TIM1->CCR1 = ccrVal;
 			TIM1->CCR2 = ccrVal;
 		}
@@ -362,7 +362,7 @@ void motorRamp(float freq, Motor motor){
 }
 
 uint16_t motorReadEnc(Motor motor){
-	if(motor == MotorRight){
+	if(motor == MotorLeft){
 		return TIM_GetCounter(TIM4);
 	}
 	else{
@@ -388,7 +388,7 @@ void motorResetDist(Motor motor){
  */
 
 void motorEnableCC(Direction dir, Motor motor){
-	if(dir == MotorForward && motor == MotorRight){
+	if(dir == MotorForward && motor == MotorLeft){
 		uint16_t tmpccmr = TIM1->CCMR1;
 		//is OC2 in PWM mode 1?
 		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
@@ -400,7 +400,7 @@ void motorEnableCC(Direction dir, Motor motor){
 		}
 		TIM1->CCMR1 = tmpccmr;
 	}
-	else if(dir == MotorBackward && motor == MotorRight){
+	else if(dir == MotorBackward && motor == MotorLeft){
 		uint16_t tmpccmr = TIM1->CCMR1;
 		//is OC1 in PWM mode 1?
 		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
@@ -412,7 +412,7 @@ void motorEnableCC(Direction dir, Motor motor){
 		}
 		TIM1->CCMR1 = tmpccmr;
 	}
-	else if(dir == MotorForward && motor == MotorLeft){
+	else if(dir == MotorForward && motor == MotorRight){
 		uint16_t tmpccmr = TIM1->CCMR2;
 		//is OC3 in PWM mode 1?
 		if(((uint16_t)(tmpccmr) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
@@ -424,7 +424,7 @@ void motorEnableCC(Direction dir, Motor motor){
 		}
 		TIM1->CCMR2 = tmpccmr;
 	}
-	else if(dir == MotorBackward && motor == MotorLeft){
+	else if(dir == MotorBackward && motor == MotorRight){
 		uint16_t tmpccmr = TIM1->CCMR2;
 		//is OC4 in PWM mode 1?
 		if(((uint16_t)(tmpccmr >> 8) & TIM_OCMode_PWM1) != TIM_OCMode_Inactive){
@@ -442,12 +442,12 @@ extern "C" {
 
 void TIM3_IRQHandler(void){
 	TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
-	motorUpdate[MotorLeft] = true;
+	motorUpdate[MotorRight] = true;
 }
 
 void TIM4_IRQHandler(void){
 	TIM_ClearITPendingBit(TIM4, TIM_IT_Update);
-	motorUpdate[MotorRight] = true;
+	motorUpdate[MotorLeft] = true;
 }
 
 }

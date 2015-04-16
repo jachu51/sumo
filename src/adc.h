@@ -21,8 +21,8 @@ enum Sharps{
 
 enum Meas{
 	BattVol = 0,
-	RMotCur = 1,
-	LMotCur = 2
+	LMotCur = 1,
+	RMotCur = 2
 };
 
 extern float sharpMean[4];

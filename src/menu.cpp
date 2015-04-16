@@ -141,7 +141,7 @@ void testMotors(void){
 	static const float maxSpeed = 500;
 	float curSpeed[] = {0, 0};
 
-	static const Motor motorsList[] = {MotorRight, MotorLeft};
+	static const Motor motorsList[] = {MotorLeft, MotorRight};
 	static const byte rectX = 20;
 	static const byte rectY = 60;
 	static const byte offX = 2;
