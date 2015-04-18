@@ -24,7 +24,7 @@ void sysInit(){
 	ledInit();
 	lineDetInit();
 	//ctrlInit();
-	motorInit(12, 40, 0, 1, 1, 64*19);
+	motorInit(/*9, 30, 0,*/ 1, 1, 64*19);
 	adcInit();
 	buttonsInit();
 	startModuleInit();

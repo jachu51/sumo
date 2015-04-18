@@ -37,14 +37,25 @@ enum Motor{
 	MotorRight = 1
 };
 
-//extern volatile int32_t motor_width[2];
+extern volatile int32_t motor_width[2];
 //extern volatile int32_t cur_speed[2];
 //extern volatile int32_t cte_int[2], cte_prev[2];
-//extern uint16_t cpr;
+extern uint16_t cpr;
+extern volatile float maxWidthCoeff[2];
+extern volatile int32_t set_speed[2];
+extern volatile bool maxWidthReached;
+extern volatile int32_t cte_int[2], cte_prev[2];
 
-void motorInit(float imotorKp,
+static const float motorKp = 9.0f;
+static const float motorKi = 30.0f;
+static const float motorKd = 0;
+
+#define MAX_WIDTH 720 //2880 //1440
+
+
+void motorInit(/*float imotorKp,
 				float imotorKi,
-				float imotorKd,
+				float imotorKd,*/
 				float icurrentKp,
 				float icurrentKi,
 				uint32_t icpr);

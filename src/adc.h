@@ -64,7 +64,7 @@ static const float measMul[] = {	3.3/4096*(18+3)/3,
 #define MEAS_PORT GPIOA
 
 #define ADC_DMA_CHANNEL DMA1_Channel1
-#define ADC_NSAMP_MEAN 12
+#define ADC_NSAMP_MEAN 36
 
 void adcInit();
 float adcSharpVol(Sharps sharp);

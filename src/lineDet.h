@@ -10,7 +10,7 @@
 
 #include "stm32f10x_gpio.h"
 
-#define LINE_DET_NSAMP_MEAN 4
+#define LINE_DET_NSAMP_MEAN 12
 
 enum Detector{
 	DetFrontLeft = 0,

@@ -82,7 +82,7 @@ EnemyDir getEnemyDir() {
 	int32_t distRightBck = adcSharpDist(curSharp[3]);
 	int32_t diff = distLeftFr - distRightFr;
 	int32_t minDist = 100;
-	int32_t maxDist = 300;
+	int32_t maxDist = 500;
 	if (diff < minDist && diff > -minDist && distLeftFr < maxDist && distRightFr < maxDist) {
 		return EnDirAhead;
 	}
@@ -124,8 +124,9 @@ void mainAlgorithm() {
 	LcdGotoXYFont(1, 1);
 	LcdStr(FONT_1X, (const byte*)"CZEKAM NA START");
 	//parametry
-	static const float speedMul = 1.2;
-	static const float runSpeedSeek = 100;
+	static const float speedMulSeek = 1.2;
+	static const float speedMulAttack = 1.2;
+	static const float runSpeedSeek = 150;
 	static const float runSpeedAttack = 200;
 	static const float maxSpeed = 500;
 
@@ -156,6 +157,7 @@ void mainAlgorithm() {
 	LcdStr(FONT_1X, (const byte*)"WALKA");
 
 	int32_t ctrUnknown = 0;
+	int32_t ctrAttack = 0;
 	int32_t ctrMotCurLimit = 0;
 	int32_t ctrRetreat = 0;
 	while(!isPushed[LEFT_BUT] &&
@@ -275,27 +277,27 @@ void mainAlgorithm() {
 		// Szukanie - ustawianie prędkości silników
 		if(mode == Seek || mode == Retreat) {
 			if(enemyDir == EnDirLeft) {
-				motorSetVel(runSpeedSeek*curSpeedMul*(1/speedMul), curMotor[0]);
-				motorSetVel(runSpeedSeek*curSpeedMul*speedMul, curMotor[1]);
+				motorSetVel(runSpeedSeek*curSpeedMul*(1/speedMulSeek), curMotor[0]);
+				motorSetVel(runSpeedSeek*curSpeedMul*speedMulSeek, curMotor[1]);
 			}
 			else if(enemyDir == EnDirRight) {
-				motorSetVel(runSpeedSeek*curSpeedMul*speedMul, curMotor[0]);
-				motorSetVel(runSpeedSeek*curSpeedMul*(1/speedMul), curMotor[1]);
+				motorSetVel(runSpeedSeek*curSpeedMul*speedMulSeek, curMotor[0]);
+				motorSetVel(runSpeedSeek*curSpeedMul*(1/speedMulSeek), curMotor[1]);
 			}
 		}
 		/// Atak - ustawianie prędkości silników
 		if (mode == Attack) {
 			if (enemyDir == EnDirAhead) {
-				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[0]);
-				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[1]);
+				motorSetVel(runSpeedAttack*curSpeedMul*speedMulAttack, curMotor[0]);
+				motorSetVel(runSpeedAttack*curSpeedMul*speedMulAttack, curMotor[1]);
 			}
 			else if (enemyDir == EnDirLeft) {
-				motorSetVel(runSpeedAttack*curSpeedMul*(1/speedMul),curMotor[0]);
-				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[1]);
+				motorSetVel(runSpeedAttack*curSpeedMul*(1/speedMulAttack),curMotor[0]);
+				motorSetVel(runSpeedAttack*curSpeedMul*speedMulAttack, curMotor[1]);
 			}
 			else if (enemyDir == EnDirRight) {
-				motorSetVel(runSpeedAttack*curSpeedMul*speedMul, curMotor[0]);
-				motorSetVel(runSpeedAttack*curSpeedMul*(1/speedMul), curMotor[1]);
+				motorSetVel(runSpeedAttack*curSpeedMul*speedMulAttack, curMotor[0]);
+				motorSetVel(runSpeedAttack*curSpeedMul*(1/speedMulAttack), curMotor[1]);
 			}
 		}
 		sysDelayMs(10);

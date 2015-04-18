@@ -13,15 +13,13 @@
 #include <stm32f10x_tim.h>
 #include <stm32f10x_gpio.h>
 
-#define MAX_WIDTH 720 //2880 //1440
 #define MAX_RPM 500
 #define MAX_MAX_WIDTH_COEFF (0.9f)
 
-static const float motorCurLimit = 1.0f;		//[A]
+static const float motorCurLimit = 4.0f;		//[A]
 volatile float maxWidthCoeff[2];
 
 volatile int32_t cte_int[2], cte_prev[2];
-volatile float motorKp, motorKi, motorKd;
 volatile float currentKp, currentKi;
 uint16_t cpr = 1;
 volatile int32_t motor_width[2];
@@ -35,16 +33,23 @@ volatile bool motorUpdate[2];
 volatile bool motorEnable[2];
 volatile float currentCteInt[2];
 
-void motorInit(float imotorKp,
+volatile bool maxWidthReached;
+
+void motorInit(/*float imotorKp,
 				float imotorKi,
-				float imotorKd,
+				float imotorKd,*/
 				float icurrentKp,
 				float icurrentKi,
 				uint32_t icpr)
 {
-	motorKp = imotorKp; motorKd = imotorKd; motorKi = imotorKi; cpr = icpr;
+//	motorKp = imotorKp;
+//	motorKi = imotorKi;
+//	motorKd = imotorKd;
+	cpr = icpr;
 	currentKp = icurrentKp;
 	currentKi = icurrentKi;
+
+	maxWidthReached = false;
 	for(int i = 0; i < 2; i++){
 		cte_int[i] = 0; cte_prev[i] = 0;
 		prev_enc[i] = 0;
@@ -234,7 +239,7 @@ void motorSetPos(float pos, Motor motor){		//rotations
 
 
 void motorSetPid(float imotorKp, float imotorKi, float imotorKd){
-	motorKp = imotorKp; motorKd = imotorKd; motorKi = imotorKi;
+//	motorKp = imotorKp; motorKd = imotorKd; motorKi = imotorKi;
 }
 
 bool motorIsCurLimited(Motor motor){
@@ -297,7 +302,6 @@ void motorPID(Motor motor){
 									motorKd*(cte - cte_prev[motor])*PID_freq +
 									motorKi*cte_int[motor]/PID_freq;
 
-			//motor_width[motor] = (float)set_speed[motor]/500 * 0.9 * MAX_WIDTH;
 			if(motor_width[motor] > MAX_WIDTH*maxWidthCoeff[motor]){
 				motor_width[motor] = MAX_WIDTH*maxWidthCoeff[motor];
 			}
@@ -309,6 +313,10 @@ void motorPID(Motor motor){
 					motor_width[motor] > (int32_t)(-MAX_WIDTH*maxWidthCoeff[motor]))
 			{
 				cte_int[motor] += cte;
+				maxWidthReached = false;
+			}
+			else{
+				maxWidthReached = true;
 			}
 //			if(cte_int[motor] > 2000 || cte_int[motor] < -2000){
 //				int a = 0;

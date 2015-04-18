@@ -222,10 +222,10 @@ void testMotors(void){
 
 		LcdGotoXYFont(5, 2);
 		buffer[20];
-		ftoa(adcMeasVol(RMotCur), buffer, 4, 2);
-		LcdStr(FONT_1X, (const byte*)"Irm=");
+		ftoa(motorKi, buffer, 4, 2);
+		LcdStr(FONT_1X, (const byte*)"ki=");
 		LcdStr(FONT_1X, (const byte*)buffer);
-		LcdStr(FONT_1X, (const byte*)"A");
+//		LcdStr(FONT_1X, (const byte*)"A");
 
 		LcdGotoXYFont(5, 3);
 		buffer[20];
@@ -233,6 +233,30 @@ void testMotors(void){
 		LcdStr(FONT_1X, (const byte*)"Ilm=");
 		LcdStr(FONT_1X, (const byte*)buffer);
 		LcdStr(FONT_1X, (const byte*)"A");
+
+		LcdGotoXYFont(5, 4);
+		buffer[20];
+		ftoa(cte_int[0], buffer, 4, 2);
+		LcdStr(FONT_1X, (const byte*)"cte_int=");
+		LcdStr(FONT_1X, (const byte*)buffer);
+
+		LcdGotoXYFont(5, 5);
+		buffer[20];
+		ftoa(motor_width[0], buffer, 4, 2);
+		LcdStr(FONT_1X, (const byte*)"mw=");
+		LcdStr(FONT_1X, (const byte*)buffer);
+
+		LcdGotoXYFont(5, 6);
+		buffer[20];
+		ftoa(set_speed[0], buffer, 4, 2);
+		LcdStr(FONT_1X, (const byte*)"s=");
+		LcdStr(FONT_1X, (const byte*)buffer);
+
+		LcdGotoXYFont(5, 7);
+		buffer[20];
+		ftoa(cte_prev[0], buffer, 4, 2);
+		LcdStr(FONT_1X, (const byte*)"cte=");
+		LcdStr(FONT_1X, (const byte*)buffer);
 
 		if(isPushed[RIGHT_BUT] != 0){
 			active = (active + 1) % sizeof(motorsList)/sizeof(motorsList[0]);
